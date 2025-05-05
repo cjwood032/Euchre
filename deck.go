@@ -40,7 +40,6 @@ func NewSpecificDeck(ranks []int, suits []Suit) *Deck{
 
 		}
 	}
-
 	return deck
 }
 
@@ -63,7 +62,7 @@ func (d *Deck) Deal() *Card {
 	return card
 }
 
-func (d *Deck) Play(card *Card) {
+func (d *Deck) Play(card *Card) { //todo: rename this to accomodate discards
 	if card == nil {
 		return
 	}

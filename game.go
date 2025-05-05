@@ -1,16 +1,18 @@
 package main
 
-import "math/rand"
+import (
+	"math/rand"
+)
 
 type Game struct {
 	Players []*Player
 	Deck *Deck
 	Suits []Suit
 	Ranks []int
-	Kitty *Deck
 	ScoreLimit int
 	Dealer int
 	CardsToDeal int
+	Rounds []*Round
 }
 
 func CreateEuchreGame(players []*Player) *Game {
@@ -22,7 +24,7 @@ func CreateEuchreGame(players []*Player) *Game {
 		Suits : []Suit{Spades,Diamonds,Clubs,Hearts},
 	}
 	game.Deck = NewSpecificDeck(game.Ranks, game.Suits)
-
+	game.Dealer = rand.Intn(len(game.Players))
 	return game
 }
 
@@ -31,11 +33,34 @@ func (game *Game) NewGame(changeTeams bool) {
 		game.RotateSeats()
 	}
 	game.ClearScores()
-	
+	game.NewRound()
 }
+
+func (game *Game) NewRound() {
+	
+	
+	game.Dealer++
+	if game.Dealer == len(game.Players){
+		game.Dealer = 0
+	}
+	
+	newDeck := NewSpecificDeck(game.Ranks, game.Suits)
+	round := &Round{Players: game.Players, Dealer: game.Dealer, Deck: newDeck }
+	round.Begin();
+	game.Rounds = append(game.Rounds, round)
+}
+
+func (game *Game) EndRound() {
+	if(game.SomeoneWon()){
+		game.RecordResults()
+		return
+	}
+	game.NewRound()
+}
+
 func (game *Game) ClearScores() {
-	for i := 0; i< len(game.Players); i++ {
-		game.Players[i].Score = 0
+	for _, player := range game.Players {
+		player.Score = 0
 	}
 }
 
@@ -46,7 +71,9 @@ func (game *Game) RandomizeSeats() {
 			game.Players[swap], game.Players[seat] = game.Players[seat], game.Players[swap]
 		}
 	}
+	game.Dealer = rand.Intn(len(game.Players))
 }
+
 func (game *Game) RotateSeats() {
 	// this is common in tournaments where 3 players will rotate seats to get new partners
 	players := game.Players
@@ -58,14 +85,6 @@ func (game *Game) RotateSeats() {
 	game.Players = newSeats
 }
 
-func (game *Game) EndRound() {
-	if(game.SomeoneWon()){
-		game.AddResults()
-		return
-	}
-	game.NewRound()
-}
-
 func (game *Game) SomeoneWon() bool {
 	for seat := 0; seat < len(game.Players); seat++ {
 		if game.Players[seat].Score >= game.ScoreLimit{
@@ -75,30 +94,11 @@ func (game *Game) SomeoneWon() bool {
 	return false
 }
 
-func (game *Game) NewRound() {
-	game.Dealer++
-	if game.Dealer == len(game.Players){
-		game.Dealer = 0
-	}
-	game.Deal()
-	//deal
-}
-func (game *Game) Deal() {
-	game.Deck = NewSpecificDeck(game.Ranks, game.Suits) //Rework me to not reinstantiate
-	game.Deck.Shuffle()
-	// starting with the player to the left of the dealer 
-	for seat := 0; seat < len(game.Players); seat++ {
-		//game.Players[seat].Hand = &Deck{}
-		game.Players[seat].Hand = game.Deck.DealQuantity(5) // deal the appropriate amount
-	}
-	
-}
-func (game *Game) AddResults() {
-	for i := 0; i < len(game.Players); i++ {
-		player := game.Players[i]
+func (game *Game) RecordResults() {
+	for _, player := range game.Players {
 		if player.Score >= game.ScoreLimit {
 			player.Wins ++
-		}else {
+		} else {
 			player.Losses++
 		}
 	}
