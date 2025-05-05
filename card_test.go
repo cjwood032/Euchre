@@ -2,6 +2,8 @@ package main
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewCard(t *testing.T) {
@@ -9,24 +11,16 @@ func TestNewCard(t *testing.T) {
 	expectedRank := 5
 	c := NewCard(5,expectedSuit)
 	
-	if c.Suit != expectedSuit {
-		t.Errorf("Suit did not match, expected %v got %v", expectedSuit, c.Suit)
-	}
-	if c.Rank != expectedRank {
-		t.Errorf("Card rank did not match, expected %v got %v", expectedRank, c.Rank)
-	}
+	assert.Equal(t, expectedSuit, c.Suit, "Expected matching suits")
+	assert.Equal(t, expectedRank, c.Rank, "Expected matching ranks")
 }
 func TestFaceCardRank(t *testing.T) {
 	expectedSuit := Spades
 	expectedRank := 13
 	c := NewCard(13,expectedSuit)
 	
-	if c.Suit != expectedSuit {
-		t.Errorf("Suit did not match, expected %v got %v", expectedSuit, c.Suit)
-	}
-	if c.Rank != expectedRank {
-		t.Errorf("Card rank did not match, expected %v got %v", expectedRank, c.Rank)
-	}
+	assert.Equal(t, expectedSuit, c.Suit, "Expected matching suits")
+	assert.Equal(t, expectedRank, c.Rank, "Expected matching ranks")
 }
 
 func TestColor(t *testing.T) {
@@ -38,9 +32,7 @@ func TestColor(t *testing.T) {
 		}
 		c := NewCard(1,suit)
 		actualColor := c.Color()
-		if expectedColor != actualColor {
-			t.Errorf("Expected %s to be color %s, got %s",suit.FriendlySuit(), expectedColor.FriendlySuitColor(), actualColor.FriendlySuitColor())
-		}
+		assert.Equal(t, expectedColor, actualColor, "Expected matching card colors")
 	}
 
 }
@@ -51,24 +43,15 @@ func TestFriendlyColor(t *testing.T) {
 		expectedSuit := suitNames[i]
 		actualSuit := suit.FriendlySuit()
 
-		
-		if expectedSuit != actualSuit {
-			t.Errorf("Expected %s, but got %s", expectedSuit, actualSuit)
-		}
+		assert.Equal(t, expectedSuit, actualSuit, "Expected suit to be the string")
 	}
 
 }
 func TestCardFaces(t *testing.T) {
 	card := NewCard(3, Clubs)
-	if card.FaceUp {
-		t.Error("Expected newly created cards to be face down")
-	}
+	assert.False(t,card.FaceUp, "Expected a new card to be face down")
 	card.TurnFaceUp()
-	if !card.FaceUp {
-		t.Error("Expected card that is turned face up to be face up")
-	}
+	assert.True(t,card.FaceUp, "Expected card that is turned face up to be face up")
 	card.TurnFaceDown()
-	if card.FaceUp {
-		t.Error("Expected card that is turned face down to be face down")
-	}
+	assert.False(t,card.FaceUp, "Expected card that is turned face down to be face down")
 }

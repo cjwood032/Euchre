@@ -29,7 +29,7 @@ func NewStandardDeck() *Deck {
 func NewSpecificDeck(ranks []int, suits []Suit) *Deck{
 	//Some examples of non-standard decks
 	// Euchre is 9-A
-	// Pinochle is 9-A with 2 of each suit (I play double deck)
+	// Pinochle is 9-A with 2 of each suit (I play double deck so I use 4)
 	// Hand and Foot is 4 full decks + jokers
 	
 	deck := &Deck{}
@@ -61,6 +61,18 @@ func (d *Deck) Deal() *Card {
 	card := d.Cards[0]
 	d.Cards = d.Cards[1:]
 	return card
+}
+
+func (d *Deck) Play(card *Card) {
+	if card == nil {
+		return
+	}
+	for i, c := range d.Cards {
+		if c.Rank == card.Rank && c.Suit == card.Suit {
+			d.Cards = append(d.Cards[:i], d.Cards[i+1:]...)
+			break
+		}
+	}
 }
 
 func (d *Deck) DealQuantity(quantity int) *Deck {
