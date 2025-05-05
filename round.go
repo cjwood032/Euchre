@@ -70,7 +70,7 @@ func (round *Round)DetermineTrump() {
 }
 
 func (round *Round) BeginPlay(call Call, trump Suit) {
-	//todo: loner logic
+	
 	
 	if(round.Deck.Cards[0].FaceUp){
 		round.Players[round.Dealer].PickUp(round.Deck.Cards[0])

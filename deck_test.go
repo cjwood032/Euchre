@@ -100,3 +100,16 @@ func TestGetWScoreWithVoidSuits(t *testing.T) {
 	wScore = newDeck.GetWScore(trump);
 	assert.Equal(t,7,wScore) 
 }
+
+func TestBestTrumpScore(t *testing.T) {
+	trump := Diamonds
+	Card1 := NewCard(11,Diamonds)
+	Card2 := NewCard(1,Clubs)
+	Card3 := NewCard(9,Clubs)
+	Card4 := NewCard(13,Spades)
+	Card5 := NewCard(12,Hearts)
+	newDeck := &Deck{Cards: []*Card{Card1, Card2, Card3, Card4, Card5}}
+	suit, score := newDeck.BestTrumpScore(trump);
+	assert.Equal(t,Hearts, suit)
+	assert.Equal(t,7,score)
+}

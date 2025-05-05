@@ -135,3 +135,22 @@ func (d *Deck) GetWScore(trump Suit) int { // todo move into calculation
 	}
 	return score
 }
+func (d *Deck) BestTrumpScore(excludedSuit Suit) (bestSuit Suit, bestScore int) {
+	allSuits := []Suit{Spades, Diamonds, Clubs, Hearts}
+	bestScore = -1 // initialize lower than possible score
+
+	for _, suit := range allSuits {
+		if suit == excludedSuit {
+			continue
+		}
+		score := d.GetWScore(suit)
+		
+		if score > bestScore {
+			bestScore = score
+			bestSuit = suit
+		}
+	}
+
+	return bestSuit, bestScore
+}
+

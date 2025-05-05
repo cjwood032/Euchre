@@ -22,6 +22,9 @@ func (player *Player)PlayCard() *Card {
 	return card
 }
 
+var minimumScore = 7
+var lonerScore = 10
+
 func (player *Player)CallOrPass(trump Suit, teamPickup bool ) Call {
 	wScore := player.Hand.GetWScore(trump)
 	//todo, sit if your to the left of the dealer and you're stronger in next
@@ -30,17 +33,16 @@ func (player *Player)CallOrPass(trump Suit, teamPickup bool ) Call {
 	} else {
 		wScore -= 2
 	}
-	if wScore > 10 {
-		return OrderUp // todo declare a loner
-	} else if wScore > 7 {
-		return OrderUp
-	}
-	return Pass
+	return DetermineCall(wScore)
 }
 
 func (player *Player)DeclareTrump(unavailableSuit Suit) (Call, Suit) {
-
-	return OrderUp, Spades
+	
+		suit, score := player.Hand.BestTrumpScore(unavailableSuit)
+		
+	
+	
+	return DetermineCall(score), suit
 }
 
 func (player *Player)PickUp(card *Card) *Card {
@@ -52,6 +54,15 @@ func (player *Player)DiscardCard() *Card {
 	card := player.Hand.Cards[0] // todo Capture discarded card
 	player.Hand.Play(card)
 	return card
+}
+
+func DetermineCall(score int) Call {
+	if score > lonerScore {
+		return OrderUp // todo declare a loner
+	} else if score > minimumScore {
+		return OrderUp
+	}
+	return Pass
 }
 //best play
 //
