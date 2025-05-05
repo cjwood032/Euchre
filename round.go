@@ -46,10 +46,9 @@ func (round *Round)DetermineTrump() {
 			return
 		}
 	}
+	
 	passedSuit := round.Deck.Cards[0].Suit
 	for i := range round.Players{
-		// 0, 1, 2, 3
-		// dealer is 2 order goes 3,0,1,2
 		playerPosition := round.Dealer + i;
 		if playerPosition >= len(round.Players) {
 			playerPosition -= 4
@@ -76,7 +75,7 @@ func (round *Round) BeginPlay(call Call, trump Suit) {
 	if(round.Deck.Cards[0].FaceUp){
 		round.Players[round.Dealer].PickUp(round.Deck.Cards[0])
 	}
-	round.Players[round.LeftOfDealer()].PlayCard()
+	//round.Players[round.LeftOfDealer()].PlayCard()
 }
 func (round *Round) LeftOfDealer() int{
 	if round.Dealer == len(round.Players) -1 {

@@ -24,8 +24,8 @@ func TestCreateEuchreGame(t *testing.T) {
 
 func TestNewGameScoreStartsAtZero(t *testing.T){
 	game := CreateEuchreGame(players)
-	for i := 0; i < len(game.Players); i++ {
-		assert.Equal(t,game.Players[i].Score, 0 , "Expected a score of zero for a new game")
+	for _, player := range game.Players {
+		assert.Equal(t, player.Score, 0 , "Expected a score of zero for a new game")
 	}
 }
 
@@ -57,8 +57,7 @@ func TestPlayerWinsLossesIncrementCorrectly(t *testing.T) {
 	game.Players[1].Score = 10
 	game.Players[3].Score = 10
 	game.EndRound()
-	for i := range game.Players {
-		player := game.Players[i]
+	for _, player := range game.Players {
 		if player.Score >= 10{
 			assert.Equal(t, 1, player.Wins)
 			assert.Equal(t, 0, player.Losses)

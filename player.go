@@ -1,9 +1,10 @@
 package main
 
+
 type Call int
 const (
 	Pass Call = iota
-	Declare 
+	OrderUp
 	Alone
 )
 
@@ -22,19 +23,23 @@ func (player *Player)PlayCard() *Card {
 }
 
 func (player *Player)CallOrPass(trump Suit) Call {
+	if player.Name == "Don" {
+		return OrderUp
+	}
 	return Pass
 }
 
 func (player *Player)DeclareTrump(unavailableSuit Suit) (Call, Suit) {
-	return Declare, Spades
+	return OrderUp, Spades
 }
 
 func (player *Player)PickUp(card *Card) *Card {
+	
 	player.Hand.Cards = append(player.Hand.Cards, card)
 	return player.DiscardCard()
 }
 func (player *Player)DiscardCard() *Card {
-	card := player.Hand.Cards[0] // todo Capture discoarded card
+	card := player.Hand.Cards[0] // todo Capture discarded card
 	player.Hand.Play(card)
 	return card
 }
