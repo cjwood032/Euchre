@@ -83,3 +83,55 @@ func (d *Deck) DealQuantity(quantity int) *Deck {
 	
 	return hand
 }
+
+func (d *Deck) GetWScore(trump Suit) int { // todo move into calculation
+	// Right bower is worth 3 points
+	// Left bower is worth 3 points if there is other trump, otherwise it is worth 2
+	// All other trump is worth 2 points
+	// Offsuit Aces are worth 1 point each
+	// Being short-suited/void is worth 1 point for each suit.
+	// We also add the value of trump if ordering to partner, or subtract when ordering to opponent but that will be in the call.
+
+	score := 0
+	hasTrump := false
+	hasLeft := false
+	suitsPresent := make(map[Suit]bool)
+	for _ ,card := range d.Cards {
+		//suitsPresent[card.Suit] = true shouldn't count the left bower
+		
+		if (card.Suit == trump && card.Rank==11){
+			score += 3
+			hasTrump = true;
+			suitsPresent[card.Suit] = true
+		} else if card.Suit == trump {
+			score += 2
+			hasTrump = true;
+			suitsPresent[card.Suit] = true
+		} else if card.Rank ==11 && card.SameColor(trump) {
+			hasLeft = true;
+			suitsPresent[trump] = true
+		} else if card.Rank == 1 {
+			score += 1
+			suitsPresent[card.Suit] = true
+		} else {
+			suitsPresent[card.Suit] = true
+		}
+		 
+
+	}
+	allSuits := []Suit{Spades, Diamonds, Clubs, Hearts}
+	var missing []Suit
+
+	for _, suit := range allSuits {
+		if !suitsPresent[suit] {
+			missing = append(missing, suit)
+		}
+	}
+	score += len(missing)
+	if (hasTrump && hasLeft){
+		score += 3
+	} else if hasLeft {
+		score +=2
+	}
+	return score
+}

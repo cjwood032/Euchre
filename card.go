@@ -47,6 +47,16 @@ func (c *Card) Color() SuitColor {
 
 	return SuitColorRed
 }
+func (c *Card) SameColor(trump Suit) bool {
+	if ((c.Suit == Clubs && trump == Spades) || 
+		(c.Suit == Spades && trump == Clubs) ||
+		(c.Suit == Hearts && trump == Diamonds) ||
+		(c.Suit == Diamonds && trump == Hearts)) {
+		return true
+	}
+
+	return false
+}
 
 func (c *Card) TurnFaceUp() {
 	c.FaceUp = true

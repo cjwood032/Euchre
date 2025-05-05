@@ -22,14 +22,24 @@ func (player *Player)PlayCard() *Card {
 	return card
 }
 
-func (player *Player)CallOrPass(trump Suit) Call {
-	if player.Name == "Don" {
+func (player *Player)CallOrPass(trump Suit, teamPickup bool ) Call {
+	wScore := player.Hand.GetWScore(trump)
+	//todo, sit if your to the left of the dealer and you're stronger in next
+	if teamPickup {
+		wScore += 2
+	} else {
+		wScore -= 2
+	}
+	if wScore > 10 {
+		return OrderUp // todo declare a loner
+	} else if wScore > 7 {
 		return OrderUp
 	}
 	return Pass
 }
 
 func (player *Player)DeclareTrump(unavailableSuit Suit) (Call, Suit) {
+
 	return OrderUp, Spades
 }
 

@@ -59,3 +59,44 @@ func TestPlayCardFromDeck(t *testing.T) {
 	assert.NotContains(t,deck.Cards,card)
 	assert.Equal(t, 51, len(deck.Cards))
 }
+// todo move this to calculations when we introduce it.
+
+func TestGetWScore(t *testing.T) {
+	trump := Diamonds
+	Card1 := NewCard(11,Diamonds)
+	Card2 := NewCard(1,Clubs)
+	Card3 := NewCard(9,Clubs)
+	Card4 := NewCard(13,Spades)
+	Card5 := NewCard(12,Hearts)
+	newDeck := &Deck{Cards: []*Card{Card1, Card2, Card3, Card4, Card5}}
+	wScore := newDeck.GetWScore(trump);
+	assert.Equal(t,4,wScore)
+}
+func TestGetWScoreWithLeft(t *testing.T) {
+	trump := Diamonds
+	Card1 := NewCard(11,Diamonds)
+	Card2 := NewCard(1,Clubs)
+	Card3 := NewCard(9,Hearts)
+	Card4 := NewCard(13,Spades)
+	Card5 := NewCard(11,Hearts)
+	newDeck := &Deck{Cards: []*Card{Card1, Card2, Card3, Card4, Card5}}
+	wScore := newDeck.GetWScore(trump);
+	assert.Equal(t,7,wScore)
+	newDeck.Cards[0] = NewCard(10, Hearts)
+	wScore = newDeck.GetWScore(trump);
+	assert.Equal(t,3,wScore) // - 3 for no right, -1 for left losing a point
+}
+func TestGetWScoreWithVoidSuits(t *testing.T) {
+	trump := Diamonds
+	Card1 := NewCard(11,Diamonds)
+	Card2 := NewCard(1,Clubs)
+	Card3 := NewCard(9,Hearts)
+	Card4 := NewCard(13,Spades)
+	Card5 := NewCard(10,Diamonds)
+	newDeck := &Deck{Cards: []*Card{Card1, Card2, Card3, Card4, Card5}}
+	wScore := newDeck.GetWScore(trump);
+	assert.Equal(t,6,wScore)
+	newDeck.Cards[2] = NewCard(10, Clubs)
+	wScore = newDeck.GetWScore(trump);
+	assert.Equal(t,7,wScore) 
+}

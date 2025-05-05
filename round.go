@@ -40,7 +40,7 @@ func (round *Round)DetermineTrump() {
 		}
 		player := round.Players[playerPosition]
 		suit := round.Deck.Cards[0].Suit
-		call := player.CallOrPass(suit)
+		call := player.CallOrPass(suit, round.Dealer % 2 == playerPosition % 2)
 		if ( call != Pass) {
 			round.BeginPlay(call, suit)
 			return
