@@ -1,0 +1,2 @@
+# Euchre
+Golang Euchre app
