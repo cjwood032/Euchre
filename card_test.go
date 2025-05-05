@@ -13,7 +13,7 @@ func TestNewCard(t *testing.T) {
 		t.Errorf("Suit did not match, expected %v got %v", expectedSuit, c.Suit)
 	}
 	if c.Rank != expectedRank {
-		t.Errorf("Card value did not match, expected %v got %v", expectedRank, c.Rank)
+		t.Errorf("Card rank did not match, expected %v got %v", expectedRank, c.Rank)
 	}
 }
 func TestFaceCardRank(t *testing.T) {
@@ -25,7 +25,7 @@ func TestFaceCardRank(t *testing.T) {
 		t.Errorf("Suit did not match, expected %v got %v", expectedSuit, c.Suit)
 	}
 	if c.Rank != expectedRank {
-		t.Errorf("Card value did not match, expected %v got %v", expectedRank, c.Rank)
+		t.Errorf("Card rank did not match, expected %v got %v", expectedRank, c.Rank)
 	}
 }
 

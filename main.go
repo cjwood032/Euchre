@@ -11,7 +11,7 @@ func main() {
 // b. build out deck object
 //	shuffle, deal(since euchre you deal either 3 or 2 cards at a time), 
 //2. Build out game rules
-	// a. Trump and how it changes card values
+	// a. Trump and how it changes card values(ranks)
 	// b. play rules, who leads, who follows
 	// c. How a trick is won.
 // 3. Build out players
