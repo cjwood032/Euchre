@@ -154,3 +154,17 @@ func (trump Suit)GetWeakColor() Suit {
 		return Spades
 	}
 }
+func (trump Suit)GetOppositeColors() []Suit {
+	
+	switch trump {
+	case Spades:
+	case Clubs:
+		return []Suit{Diamonds,Hearts}
+	case Diamonds:
+	case Hearts:
+		return []Suit{Spades,Clubs}
+	default:
+		return []Suit{}
+	}
+	return []Suit{}
+}

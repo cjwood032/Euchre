@@ -169,17 +169,72 @@ func (cm *CardMap) BestTrumpScore(excludedSuit Suit) (bestSuit Suit, bestScore i
 	return bestSuit, bestScore
 }
 
-
-/*
-func (cm *CardMap) Sort(suit Suit, isTrump bool) Deck {
+func (cm *CardMap) Sort(suit Suit, isTrump bool) []*Card {
 	
-	hasLeft := cm.hasLeftBower()
+	hasLeft := cm.hasLeftBower(suit)
 	hasRight := false
 	hasAce :=false
-	ranks := cm.Hand[suit]
-	deck := &Deck
-	for _, rank := range ranks {
-		
+	var cards []*Card
+	for rank := 0; rank < 14; rank++ {
+		if cm.Hand[suit][rank] {
+			if rank == 1 {
+				hasAce = true;
+			}else if rank == 11{
+				hasRight = true;
+			} else {
+				cards = append(cards, &Card{Suit: suit, Rank: rank})
+			}
+		}
 	}
+	if hasAce {
+		cards = append(cards, &Card{Suit: suit, Rank: 1})
+	}
+	if hasLeft && isTrump {
+		cards = append(cards, &Card{Suit: suit.GetWeakColor(), Rank: 11})
+	}
+	if hasRight && isTrump {
+		cards = append(cards, &Card{Suit: suit, Rank: 11})
+	}
+	
+	return cards
 }
-	*/
+
+func (cm *CardMap) getStrongestOffsuit(trump Suit) *Card {
+	oppositeColorSuits := trump.GetOppositeColors()
+
+	// 1. Prefer short-suited opposite-color suits (only one card)
+	for _, suit := range oppositeColorSuits {
+		if cm.CountSuit(suit) == 1 {
+			for rank := 13; rank >= 0; rank-- {
+				if cm.Hand[suit][rank] {
+					return &Card{Suit: suit, Rank: rank}
+				}
+			}
+		}
+	}
+
+	// 2. Otherwise, pick the strongest card among opposite-color suits
+	for _, suit := range oppositeColorSuits {
+		for rank := 13; rank >= 0; rank-- {
+			if cm.Hand[suit][rank] {
+				return &Card{Suit: suit, Rank: rank}
+			}
+		}
+	}
+
+	// 3. Fallback: strongest non-trump card
+	for suit := 0; suit < 4; suit++ {
+		if Suit(suit) == trump {
+			continue
+		}
+		for rank := 13; rank >= 0; rank-- {
+			if cm.Hand[suit][rank] {
+				return &Card{Suit: Suit(suit), Rank: rank}
+			}
+		}
+	}
+
+	return nil
+}
+
+	
