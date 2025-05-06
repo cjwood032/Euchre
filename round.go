@@ -4,15 +4,9 @@ type Round struct{
 	Players []*Player
 	Dealer int
 	Caller *Player
-	Tricks *Deck
+	TricksWon int
 	Deck *Deck
 	Trump Suit
-}
-
-type PlayerRound struct {
-	TricksWon int
-	Player *Player
-	Partner *Player
 }
 
 func (round *Round) Begin() {
@@ -26,7 +20,8 @@ func (round *Round) Deal() {
 	round.Deck.Shuffle()
 	// starting with the player to the left of the dealer 
 	for _, player := range round.Players {
-		player.Hand = round.Deck.DealQuantity(5) // deal the appropriate amount
+		cards := round.Deck.DealQuantity(5) // deal the appropriate amount
+		player.CardMap.AddCardsToHand(cards)
 	}
 	round.Deck.Cards[0].TurnFaceUp()
 }

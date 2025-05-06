@@ -10,7 +10,6 @@ const (
 
 type Player struct {
 	Name string
-	Hand *Deck
 	CardMap CardMap
 	CardsInSuit map[Suit]int
 	Score int
@@ -19,14 +18,13 @@ type Player struct {
 	ComputerPlayer bool
 }
 
-
-func (player *Player)PlayCard(card *Card) *Card {
-	player.Hand.Play(card)
-	return card
-}
-
 var minimumScore = 7
 var lonerScore = 10
+
+func (player *Player) PlayCard(card *Card) *Card {
+	player.CardMap.RemoveFromHand(card)
+	return card
+}
 
 func (player *Player)CallOrPass(trump Suit, teamPickup bool ) Call {
 	wScore := player.CardMap.GetWScore(trump)
@@ -44,17 +42,17 @@ func (player *Player)DeclareTrump(unavailableSuit Suit) (Call, Suit) {
 	return DetermineCall(score), suit
 }
 
-func (player *Player)PickUp(card *Card) *Card {
-	
-	player.Hand.Cards = append(player.Hand.Cards, card)
-	return player.DiscardCard()
+func (player *Player) PickUp(card *Card) *Card {
+	player.CardMap.AddToHand(card)
+	return player.DiscardCard(card)
 }
 
 
-func (player *Player)DiscardCard() *Card {
-	card := player.Hand.Cards[0] // todo Capture discarded card
-	player.Hand.Play(card)
-	return card
+func (player *Player) DiscardCard(card *Card) *Card {
+		player.CardMap.RemoveFromHand(card)
+		return card
+	
+	
 }
 
 func DetermineCall(score int) Call {
@@ -76,16 +74,12 @@ func DetermineCall(score int) Call {
 	// if player does not have the suit 
 	// if player's team is not winning, play trump to win
 	// if player's team is winning, play to short suit if player has only one card in another non-trump suit, otherwise throw low non-trump
-
 	func (player *Player) BestPlay(currentTrick []Card, round Round) Card {
-		if len(currentTrick) ==0 {
-			return *player.PlayCard(player.Hand.Cards[0])//BestLead()
-		}
 		leadSuit := currentTrick[0].Suit
-		winningCard, winningPlayer := getWinningCard(currentTrick, round.Trump, leadSuit)
-		winningTeam := (winningPlayer == round.Caller) || (player.getPartner(round.Players) == winningPlayer)
+		winningCard, winningPlayer := getWinningCard(currentTrick, round.Players, round.Trump, leadSuit)
+		winningTeam := player.getPartner(round.Players) == winningPlayer
 	
-		hand := player.Hand.Cards
+		hand := player.CardMap.ToSlice()
 		playable := getPlayableCards(hand, leadSuit, round.Trump)
 		hasLeadSuit := len(playable.inSuit) > 0
 	
@@ -95,13 +89,13 @@ func DetermineCall(score int) Call {
 					betterTrump := getLowestWinningTrump(playable.trump, winningCard, round.Trump, leadSuit)
 					if betterTrump != nil {
 						return *betterTrump
-					} 
+					}
 				}
 				return getLowest(playable.other, round.Trump)
 			} else {
-				shortSuit := findShortSuit(player.Hand, round.Trump)
+				shortSuit := findShortSuit(player.CardMap, round.Trump)
 				if shortSuit != -1 {
-					return getCardInSuit(player.Hand, shortSuit, true)
+					return getCardInSuit(player.CardMap, shortSuit, true)
 				}
 				return getLowest(playable.other, round.Trump)
 			}
@@ -128,7 +122,6 @@ func DetermineCall(score int) Call {
 		if len(winningTrumps) == 0 {
 			return nil
 		}
-		// Return the lowest trump that still wins
 		lowest := winningTrumps[0]
 		for _, c := range winningTrumps[1:] {
 			if !lowest.Beats(*c, trump, lead) {
@@ -138,15 +131,16 @@ func DetermineCall(score int) Call {
 		return lowest
 	}
 	
-	
-	func getWinningCard(cards []Card, trump Suit, lead Suit) (Card, *Player) {
+	func getWinningCard(cards []Card, players []*Player, trump Suit, lead Suit) (Card, *Player) {
 		winning := cards[0]
-		for _, card := range cards[1:] {
+		position := 0
+		for i, card := range cards[1:] {
 			if card.Beats(winning, trump, lead) {
 				winning = card
+				position = i + 1
 			}
 		}
-		return winning, nil // Placeholder
+		return winning, players[position]
 	}
 	
 	func getPlayableCards(hand []*Card, lead Suit, trump Suit) (result struct{ inSuit, trump, other []*Card }) {
@@ -193,45 +187,34 @@ func DetermineCall(score int) Call {
 	}
 	
 	func isWeak(card Card) bool {
-		return card.Rank <= 12 // Assume Q or lower is weak
+		return card.Rank <= 12
 	}
 	
-	func findShortSuit(hand *Deck, trump Suit) Suit {
-		suitCounts := make(map[Suit]int)
-		for _, c := range hand.Cards {
-			if c.Suit != trump {
-				suitCounts[c.Suit]++
-			}
-		}
-		for suit, count := range suitCounts {
-			if count == 1 {
+	func findShortSuit(cardMap CardMap, trump Suit) Suit {
+		for suit := Suit(0); suit < 4; suit++ { // Assuming 4 suits: 0 to 3
+			if suit != trump && cardMap.CountSuit(suit) == 1 {
 				return suit
 			}
 		}
 		return -1
-	}
+	}	
 	
-	func getCardInSuit(hand *Deck, suit Suit, lowest bool) Card {
-		var candidates []Card
-		for _, c := range hand.Cards {
-			if c.Suit == suit {
-				candidates = append(candidates, *c)
-			}
-		}
-		if len(candidates) == 0 {
-			return *hand.Cards[0] // fallback
+	func getCardInSuit(cardMap CardMap, suit Suit, lowest bool) Card {
+		cards := cardMap.CardsInSuit(suit)
+		if len(cards) == 0 {
+			return *cardMap.ToSlice()[0] // fallback
 		}
 		if lowest {
-			return getLowest(cardPointers(candidates), suit)
+			return getLowest(cards, suit)
 		}
-		return getStrongest(cardPointers(candidates), suit)
+		return getStrongest(cards, suit)
 	}
+	
 	
 	func (player *Player) getPartner(players []*Player) *Player {
 		for i, p := range players {
 			if p == player {
 				if i > 1 {
-
 					return players[i-2]
 				}
 				return players[i+2]
@@ -240,12 +223,23 @@ func DetermineCall(score int) Call {
 		return nil
 	}
 	
-	func cardPointers(cards []Card) []*Card {
-		var ptrs []*Card
-		for i := range cards {
-			ptrs = append(ptrs, &cards[i])
-		}
-		return ptrs
+		
+	func leadTrump(cards []*Card) Card {
+		higestRank := cards[0]
+		
+		return *higestRank
+		// Return the lowest trump that still wins
+		
 	}
-	
+
+	func (player *Player) bestLead(round Round) Card {
+		// Did we call? 
+		
+		trumpCards := player.CardMap.CardsInSuit(round.Trump)
+		if player.getPartner(round.Players) == round.Caller && len(trumpCards) > 0 {
+			return leadTrump(trumpCards)
+			
+		}
+		return *NewCard(1,Spades)
+	}
 

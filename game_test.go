@@ -6,30 +6,26 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var players = []*Player{
-	{Name: "Chris"},
-	{Name: "Don"},
-	{Name: "MaryAnn"},
-	{Name: "Andy"},
-}
+
 var ranks = []int{1,9,10,11,12,13}
 var suits = []Suit{Spades,Diamonds,Clubs,Hearts}
 var expectedEuchreDeckSize = 24
 var cardsToDeal = 5
 func TestCreateEuchreGame(t *testing.T) {
-	game := CreateEuchreGame(players)
+	game := CreateEuchreGame(CreatePlayers())
 	assert.Equal(t, expectedEuchreDeckSize, len(ranks) * len(suits))
 	assert.Equal(t,expectedEuchreDeckSize,len(game.Deck.Cards))
 }
 
 func TestNewGameScoreStartsAtZero(t *testing.T){
-	game := CreateEuchreGame(players)
+	game := CreateEuchreGame(CreatePlayers())
 	for _, player := range game.Players {
 		assert.Equal(t, player.Score, 0 , "Expected a score of zero for a new game")
 	}
 }
 
 func TestRotateSeats(t *testing.T) {
+	players := CreatePlayers()
 	game := CreateEuchreGame(players)
 	assert.Equal(t,game.Players[0], players[0],"Expected player in Order")
 	assert.Equal(t,game.Players[1], players[1],"Expected player in Order")
@@ -39,7 +35,7 @@ func TestRotateSeats(t *testing.T) {
 }
 
 func TestEndRoundStopsGameIfScoreMet(t *testing.T) {
-	game := CreateEuchreGame(players)
+	game := CreateEuchreGame(CreatePlayers())
 	assert.False(t, game.SomeoneWon())
 	game.Players[0].Score = 10
 	game.EndRound()
@@ -47,7 +43,7 @@ func TestEndRoundStopsGameIfScoreMet(t *testing.T) {
 }
 
 func TestPlayerWinsLossesIncrementCorrectly(t *testing.T) {
-	players = []*Player{
+	players := []*Player{
 		{Name: "Chris"},
 		{Name: "Don"},
 		{Name: "MaryAnn"},

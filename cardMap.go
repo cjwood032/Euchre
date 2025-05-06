@@ -10,6 +10,12 @@ func (cm *CardMap) AddToHand(card *Card) {
 	cm.Hand[card.Suit][card.Rank] = true
 }
 
+func (cm *CardMap) AddCardsToHand(cards *Deck) {
+	for _, card := range cards.Cards {
+		cm.AddToHand(card)
+	}
+}
+
 func (cm *CardMap) RemoveFromHand(card *Card) {
 	cm.Hand[card.Suit][card.Rank] = false
 	cm.Seen[card.Suit][card.Rank] = true // Also mark as seen
@@ -54,8 +60,126 @@ func (cm *CardMap) CountSuits(trump Suit) map[Suit]int {
 }
 
 
-func (cm *CardMap) isLeftBower(cardSuit, trump Suit) bool {
-	return cardSuit != trump &&
-		cardSuit.SameColor(trump) &&
-		cm.Hand[cardSuit][11]
+func (cm *CardMap) hasLeftBower(trump Suit) bool {
+
+	cardSuit := trump.GetWeakColor()
+	return cm.Hand[cardSuit][11]
 }
+
+func (cm CardMap) ToSlice() []*Card {
+	var cards []*Card
+	for suit := 0; suit < 4; suit++ {
+		for rank := 0; rank < 14; rank++ {
+			if cm.Hand[suit][rank] {
+				cards = append(cards, &Card{Suit: Suit(suit), Rank: rank})
+			}
+		}
+	}
+	return cards
+}
+
+func (cm CardMap) CardsInSuit(suit Suit) []*Card {
+	var cards []*Card
+	for rank := 0; rank < 14; rank++ {
+		if cm.Hand[suit][rank] {
+			cards = append(cards, &Card{Suit: suit, Rank: rank})
+		}
+	}
+	return cards
+}
+func (cm CardMap) CountSuit(suit Suit) int {
+	count := 0
+	for rank := 0; rank < 14; rank++ {
+		if cm.Hand[suit][rank] {
+			count++
+		}
+	}
+	return count
+}
+
+
+func (cm *CardMap) GetWScore(trump Suit) int {
+	// Right bower is worth 3 points
+	// Left bower is worth 3 points if there is other trump, otherwise it is worth 2
+	// All other trump is worth 2 points
+	// Offsuit Aces are worth 1 point each
+	// Being short-suited/void is worth 1 point for each suit.
+	// We also add the value of trump if ordering to partner, or subtract when ordering to opponent but that will be in the call.
+	score := 0
+	hasTrump := false
+	hasLeft := false
+
+	for suit := Spades; suit <= Hearts; suit++ {
+		for rank := 1; rank <= 13; rank++ {
+			if !cm.Hand[suit][rank] {
+				continue
+			}
+
+			// Right bower
+			if suit == trump && rank == 11 {
+				score += 3
+				hasTrump = true
+			} else if suit.SameColor(trump) && suit != trump && rank == 11 {
+				// Left bower (will count as trump)
+				hasLeft = true
+			} else if suit == trump {
+				score += 2
+				hasTrump = true
+			} else if rank == 1 {
+				// Offsuit ace
+				score += 1
+			}
+		}
+	}
+
+	// Add bonus for left bower based on whether we have other trump
+	if hasLeft && hasTrump {
+		score += 3
+	} else if hasLeft {
+		score += 2
+	}
+
+	// Add points for void suits
+	suitCounts := cm.CountSuits(trump)
+	for _, count := range suitCounts {
+		if count == 0 {
+			score += 1
+		}
+	}
+
+	return score
+}
+
+func (cm *CardMap) BestTrumpScore(excludedSuit Suit) (bestSuit Suit, bestScore int) {
+	allSuits := []Suit{Spades, Diamonds, Clubs, Hearts}
+	bestScore = -1 // initialize lower than possible score
+
+	for _, suit := range allSuits {
+		if suit == excludedSuit {
+			continue
+		}
+		score := cm.GetWScore(suit)
+		
+		if score > bestScore {
+			bestScore = score
+			bestSuit = suit
+		}
+	}
+
+	return bestSuit, bestScore
+}
+
+
+/*
+func (cm *CardMap) Sort(suit Suit, isTrump bool) Deck {
+	
+	hasLeft := cm.hasLeftBower()
+	hasRight := false
+	hasAce :=false
+	ranks := cm.Hand[suit]
+	deck := &Deck
+	for _, rank := range ranks {
+		
+	}
+}
+	*/

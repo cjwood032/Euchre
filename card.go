@@ -138,3 +138,19 @@ func (c Card) Beats(other Card, trump Suit, lead Suit) bool {
 	}
 	return false
 }
+
+func (trump Suit)GetWeakColor() Suit {
+	// The weak color is the one matching trump, because the Jack becomes the left Bower.
+	switch trump {
+	case Spades:
+		return Clubs
+	case Diamonds:
+		return Hearts
+	case Clubs:
+		return Spades
+	case Hearts:
+		return Diamonds
+	default:
+		return Spades
+	}
+}
