@@ -1,29 +1,46 @@
 package main
 
-type Round struct{
-	Players []*Player
-	Dealer int
-	Caller *Player
-	TricksWon int
-	Deck *Deck
-	Trump Suit
+type Round struct {
+    Players []*Player
+    Dealer int
+    Caller *Player
+    TricksWon int
+    Deck *Deck
+    Trump Suit
+    Turn int
+    Lead int
+    Alone bool
 }
 
 func (round *Round) Begin() {
-	round.Deal()
-	//round.DetermineTrump()
+    // Ensure we have a valid deck with cards
+    if round.Deck == nil || len(round.Deck.Cards) == 0 {
+        round.Deck = NewSpecificDeck([]int{9, 10, 11, 12, 13, 1}, []Suit{Spades, Diamonds, Clubs, Hearts})
+    }
+    round.Deck.Shuffle()
+    round.Deal()
 }
 
 func (round *Round) Deal() {
+    // Ensure we have enough cards to deal (5 cards to each of 4 players = 20 cards)
+    if len(round.Deck.Cards) < 20 {
+        round.Deck = NewSpecificDeck([]int{9, 10, 11, 12, 13, 1}, []Suit{Spades, Diamonds, Clubs, Hearts})
+        round.Deck.Shuffle()
+    }
 
-	
-	round.Deck.Shuffle()
-	// starting with the player to the left of the dealer 
-	for _, player := range round.Players {
-		cards := round.Deck.DealQuantity(5) // deal the appropriate amount
-		player.CardMap.AddCardsToHand(cards)
-	}
-	round.Deck.Cards[0].TurnFaceUp()
+    // Deal 5 cards to each player
+    for _, player := range round.Players {
+        cards := round.Deck.DealQuantity(5)
+        if len(cards.Cards) < 5 {
+            panic("Not enough cards in deck to deal")
+        }
+        player.CardMap.AddCardsToHand(cards)
+    }
+    
+    // Set the top card face up
+    if len(round.Deck.Cards) > 0 {
+        round.Deck.Cards[0].TurnFaceUp()
+    }
 }
 
 func (round *Round)DetermineTrump() {
@@ -78,4 +95,18 @@ func (round *Round) LeftOfDealer() int{
 		return 0
 	}
 	return round.Dealer +1
+}
+func (r *Round) DetermineTrickWinner(trick []*Card, lead int) int {
+	winningIndex := lead
+	winningCard := trick[lead]
+
+	for i := 1; i < 4; i++ {
+		pos := (lead + i) % 4
+		card := trick[pos]
+		if card.Beats(winningCard, r.Trump, trick[lead].Suit) {
+			winningCard = card
+			winningIndex = pos
+		}
+	}
+	return winningIndex
 }

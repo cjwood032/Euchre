@@ -16,6 +16,7 @@ type Player struct {
 	Wins int
 	Losses int
 	ComputerPlayer bool
+	TricksWon int
 }
 
 var minimumScore = 7
@@ -47,6 +48,14 @@ func (player *Player) PickUp(card *Card) *Card {
 	return player.DiscardCard(card)
 }
 
+func (player *Player) InitCardMap() {
+    player.CardMap = CardMap{
+        Hand: [4][14]bool{},
+        Seen: [4][14]bool{},
+    }
+    player.CardsInSuit = make(map[Suit]int)
+    player.TricksWon = 0
+}
 
 func (player *Player) DiscardCard(card *Card) *Card {
 		player.CardMap.RemoveFromHand(card)
@@ -74,7 +83,7 @@ func DetermineCall(score int) Call {
 // if player does not have the suit 
 // if player's team is not winning, play trump to win
 // if player's team is winning, play to short suit if player has only one card in another non-trump suit, otherwise throw low non-trump
-func (player *Player) BestPlay(currentTrick []Card, round Round) Card {
+func (player *Player) BestPlay(currentTrick []*Card, round Round) Card {
 	if len(currentTrick) == 0 {
 		//we lead
 		trumpCards := player.CardMap.CardsInSuit(round.Trump)
@@ -120,7 +129,7 @@ func (player *Player) BestPlay(currentTrick []Card, round Round) Card {
 	}
 }
 
-func getLowestWinningTrump(cards []*Card, currentWinner Card, trump Suit, lead Suit) *Card {
+func getLowestWinningTrump(cards []*Card, currentWinner *Card, trump Suit, lead Suit) *Card {
 	var winningTrumps []*Card
 	for _, c := range cards {
 		if c.Beats(currentWinner, trump, lead) {
@@ -132,14 +141,14 @@ func getLowestWinningTrump(cards []*Card, currentWinner Card, trump Suit, lead S
 	}
 	lowest := winningTrumps[0]
 	for _, c := range winningTrumps[1:] {
-		if !lowest.Beats(*c, trump, lead) {
+		if !lowest.Beats(c, trump, lead) {
 			lowest = c
 		}
 	}
 	return lowest
 }
 
-func getWinningCard(cards []Card, players []*Player, trump Suit, lead Suit) (Card, *Player) {
+func getWinningCard(cards []*Card, players []*Player, trump Suit, lead Suit) (*Card, *Player) {
 	winning := cards[0]
 	position := 0
 	for i, card := range cards[1:] {
@@ -167,7 +176,7 @@ func getPlayableCards(hand []*Card, lead Suit, trump Suit) (result struct{ inSui
 func getStrongest(cards []*Card, trump Suit) Card {
 	strongest := cards[0]
 	for _, c := range cards[1:] {
-		if c.Beats(*strongest, trump, strongest.Suit) {
+		if c.Beats(strongest, trump, strongest.Suit) {
 			strongest = c
 		}
 	}
@@ -177,14 +186,14 @@ func getStrongest(cards []*Card, trump Suit) Card {
 func getLowest(cards []*Card, trump Suit) Card {
 	lowest := cards[0]
 	for _, c := range cards[1:] {
-		if !c.Beats(*lowest, trump, c.Suit) {
+		if !c.Beats(lowest, trump, c.Suit) {
 			lowest = c
 		}
 	}
 	return *lowest
 }
 
-func getStrongerThan(cards []*Card, target Card, trump Suit) []*Card {
+func getStrongerThan(cards []*Card, target *Card, trump Suit) []*Card {
 	var result []*Card
 	for _, c := range cards {
 		if c.Beats(target, trump, target.Suit) {
@@ -194,7 +203,7 @@ func getStrongerThan(cards []*Card, target Card, trump Suit) []*Card {
 	return result
 }
 
-func isWeak(card Card) bool {
+func isWeak(card *Card) bool {
 	return card.Rank <= 12
 }
 

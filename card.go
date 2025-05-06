@@ -101,7 +101,7 @@ func (color SuitColor) FriendlySuitColor() string {
 		return "Unknown"
 	}
 }
-func (c Card) Beats(other Card, trump Suit, lead Suit) bool {
+func (c *Card) Beats(other *Card, trump Suit, lead Suit) bool {
 	// Right bower check
 	if c.Rank == 11 && c.Suit == trump {
 		return true

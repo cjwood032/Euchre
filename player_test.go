@@ -101,10 +101,10 @@ func TestBestPlay_PlayerCanWinWithTrump(t *testing.T) {
 			NewCard(9, Clubs),
 		}})
 
-	currentTrick := []Card{
-		*NewCard(13, Clubs),
-		*NewCard(12, Clubs), 
-		*NewCard(1, Clubs),
+	currentTrick := []*Card{
+		NewCard(13, Clubs),
+		NewCard(12, Clubs), 
+		NewCard(1, Clubs),
 	}
 
 	round := Round{
@@ -147,9 +147,9 @@ func TestBestPlay_PlayerHasLeadSuit(t *testing.T) {
 			NewCard(9, Clubs),
 		}})
 
-	currentTrick := []Card{
-		*NewCard(13, Clubs),
-		*NewCard(12, Clubs),
+	currentTrick := []*Card{
+		NewCard(13, Clubs),
+		NewCard(12, Clubs),
 	}
 
 
@@ -190,10 +190,10 @@ func TestBestPlay_PlayerIsShortSuited(t *testing.T) {
 			NewCard(9, Clubs),
 		}})
 
-	currentTrick := []Card{
-		*NewCard(13, Clubs),
-		*NewCard(12, Clubs),
-		*NewCard(1, Clubs),
+	currentTrick := []*Card{
+		NewCard(13, Clubs),
+		NewCard(12, Clubs),
+		NewCard(1, Clubs),
 	}
 
 	round := Round{

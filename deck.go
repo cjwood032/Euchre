@@ -26,21 +26,14 @@ func NewStandardDeck() *Deck {
 	return deck
 }
 
-func NewSpecificDeck(ranks []int, suits []Suit) *Deck{
-	//Some examples of non-standard decks
-	// Euchre is 9-A
-	// Pinochle is 9-A with 2 of each suit (I play double deck so I use 4)
-	// Hand and Foot is 4 full decks + jokers
-	
-	deck := &Deck{}
-
-	for _, suit := range suits {
-		for _, rank := range ranks {
-			deck.Cards = append(deck.Cards, NewCard(rank, suit))
-
-		}
-	}
-	return deck
+func NewSpecificDeck(ranks []int, suits []Suit) *Deck {
+    deck := &Deck{}
+    for _, suit := range suits {
+        for _, rank := range ranks {
+            deck.Cards = append(deck.Cards, NewCard(rank, suit))
+        }
+    }
+    return deck
 }
 
 func (d *Deck) Shuffle() {
@@ -57,9 +50,24 @@ func (d *Deck) ShuffleFromSeed(seed int64) {
 }
 
 func (d *Deck) Deal() *Card {
-	card := d.Cards[0]
-	d.Cards = d.Cards[1:]
-	return card
+    if len(d.Cards) == 0 {
+        return nil // or handle this error appropriately
+    }
+    card := d.Cards[0]
+    d.Cards = d.Cards[1:]
+    return card
+}
+
+func (d *Deck) DealQuantity(quantity int) *Deck {
+    hand := &Deck{}
+    for i := 0; i < quantity; i++ {
+        if len(d.Cards) == 0 {
+            break // or handle this error
+        }
+        card := d.Deal()
+        hand.Cards = append(hand.Cards, card)
+    }
+    return hand
 }
 
 func (d *Deck) Play(card *Card) { //todo: rename this to accomodate discards
@@ -74,12 +82,3 @@ func (d *Deck) Play(card *Card) { //todo: rename this to accomodate discards
 	}
 }
 
-func (d *Deck) DealQuantity(quantity int) *Deck {
-	hand := &Deck{}
-	for i :=0; i<quantity; i++ {
-		card := d.Deal()
-		hand.Cards = append(hand.Cards, card)
-	}
-	
-	return hand
-}

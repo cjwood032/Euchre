@@ -29,25 +29,39 @@ func CreateEuchreGame(players []*Player) *Game {
 }
 
 func (game *Game) NewGame(changeTeams bool) {
-	if(changeTeams) {
-		game.RotateSeats()
-	}
-	game.ClearScores()
-	game.NewRound()
+    if changeTeams {
+        game.RotateSeats()
+    }
+    game.ClearScores()
+    
+    // Initialize player states
+    for _, player := range game.Players {
+        player.InitCardMap()
+    }
+    
+    game.NewRound()
 }
 
 func (game *Game) NewRound() {
-	
-	
-	game.Dealer++
-	if game.Dealer == len(game.Players){
-		game.Dealer = 0
-	}
-	
-	newDeck := NewSpecificDeck(game.Ranks, game.Suits)
-	round := &Round{Players: game.Players, Dealer: game.Dealer, Deck: newDeck }
-	round.Begin();
-	game.Rounds = append(game.Rounds, round)
+    game.Dealer++
+    if game.Dealer == len(game.Players) {
+        game.Dealer = 0
+    }
+
+    // Initialize player states
+    for _, player := range game.Players {
+        player.InitCardMap()
+        player.TricksWon = 0
+    }
+
+    // Create a new deck with the correct cards for Euchre
+    round := &Round{
+        Players: game.Players,
+        Dealer: game.Dealer,
+        Deck: NewSpecificDeck(game.Ranks, game.Suits),
+    }
+    round.Begin()
+    game.Rounds = append(game.Rounds, round)
 }
 
 func (game *Game) EndRound() {
