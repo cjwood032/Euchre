@@ -10,8 +10,9 @@ type Round struct{
 }
 
 type PlayerRound struct {
-	Player *Player
 	TricksWon int
+	Player *Player
+	Partner *Player
 }
 
 func (round *Round) Begin() {
@@ -40,7 +41,7 @@ func (round *Round)DetermineTrump() {
 		}
 		player := round.Players[playerPosition]
 		suit := round.Deck.Cards[0].Suit
-		call := player.CallOrPass(suit, round.Dealer % 2 == playerPosition % 2)
+		call := player.CallOrPass(suit, round.Dealer % 2 == playerPosition % 2) //todo use the player round
 		if ( call != Pass) {
 			round.BeginPlay(call, suit)
 			return

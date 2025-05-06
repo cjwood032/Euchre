@@ -101,3 +101,40 @@ func (color SuitColor) FriendlySuitColor() string {
 		return "Unknown"
 	}
 }
+func (c Card) Beats(other Card, trump Suit, lead Suit) bool {
+	// Right bower check
+	if c.Rank == 11 && c.Suit == trump {
+		return true
+	}
+	if other.Rank == 11 && other.Suit == trump {
+		return false
+	}
+
+	// Left bower check
+	if c.Rank == 11 && c.SameColor(trump) && c.Suit != trump {
+		if !(other.Rank == 11 && other.SameColor(trump) && other.Suit != trump) {
+			return true
+		}
+		return c.Rank > other.Rank
+	}
+	if other.Rank == 11 && other.SameColor(trump) && other.Suit != trump {
+		return false
+	}
+
+	// Trump beats everything else
+	if c.Suit == trump && other.Suit != trump {
+		return true
+	}
+	if other.Suit == trump && c.Suit != trump {
+		return false
+	}
+
+	// Follow suit
+	if c.Suit == other.Suit {
+		return c.Rank > other.Rank
+	}
+	if c.Suit == lead && other.Suit != lead {
+		return true
+	}
+	return false
+}
