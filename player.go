@@ -50,8 +50,8 @@ func (player *Player) PickUp(card *Card) *Card {
 
 func (player *Player) InitCardMap() {
     player.CardMap = CardMap{
-        Hand: [4][14]bool{},
-        Seen: [4][14]bool{},
+        Hand: [4][14]bool{},  // Clears all cards from hand
+        Seen: [4][14]bool{},  // Clears all seen cards
     }
     player.CardsInSuit = make(map[Suit]int)
     player.TricksWon = 0

@@ -61,7 +61,7 @@ func updateTrickDisplay(trick []*Card, trickBoxes [4]*fyne.Container, cardSize f
 		if card != nil {
 			trickBoxes[i].Add(renderCardImage(card, cardSize))
 		}
-		trickBoxes[i].Refresh()
+		//trickBoxes[i].Refresh()
 	}
 }
 
@@ -123,7 +123,7 @@ func updateHumanHand(player *Player, trick []*Card, handBox *fyne.Container, tri
 		handBox.Add(cardUI)
 	}
 
-	handBox.Refresh()
+	//handBox.Refresh()
 }
 
 func playerLabel(player *Player, isDealer bool) fyne.CanvasObject {
@@ -135,6 +135,7 @@ func playerLabel(player *Player, isDealer bool) fyne.CanvasObject {
 }
 
 func main() {
+
 	var controlBox *fyne.Container
 	var callButtons *fyne.Container
 
@@ -154,7 +155,7 @@ func main() {
 		{Name: "West", ComputerPlayer: true},
 	}
 	game := CreateEuchreGame(players)
-	game.NewRound()
+	game.NewGame(false)
 	round := game.Rounds[len(game.Rounds)-1]
 	dealerIndex := round.Dealer
 
@@ -211,40 +212,33 @@ func main() {
 
 	controlBox = container.NewHBox()
 	newGameBtn := widget.NewButton("New Game", func() {
-		// Rebuild everything cleanly
+		
 		game = CreateEuchreGame(players)
-		game.NewRound()
+		
+		game.NewGame(false)  
 		round = game.Rounds[len(game.Rounds)-1]
 		dealerIndex = round.Dealer
-
-		for _, player := range players {
-			player.TricksWon = 0
-		}
-
-		for i := range trick {
-			trick[i] = nil
-		}
+		
 		handBox.Objects = nil
 		for i := range trickBoxes {
 			trickBoxes[i].Objects = nil
-			trickBoxes[i].Refresh()
 		}
-
 		kittyBox.Objects = nil
+		
+		// Show the top card if face up
 		if len(round.Deck.Cards) > 0 && round.Deck.Cards[0].FaceUp {
-			topCard := round.Deck.Cards[len(round.Deck.Cards)-1]
+			topCard := round.Deck.Cards[0]  // Fixed index (was using len-1)
 			kittyBox.Add(renderCardImage(topCard, cardSize))
 		}
-		kittyBox.Refresh()
-
-		// Deal cards to players
-		round.Deal()
-
-		// Trigger AI calls and allow human to call when it's their turn
-		// Begin trump calling round
-		passedSuit := round.Deck.Cards[len(round.Deck.Cards)-1].Suit
+	
+		// Update UI with human player's hand
+		updateHumanHand(human, trick, handBox, trickBoxes, round, myWindow)
+		
+		// Start the bidding process
+		passedSuit := round.Deck.Cards[0].Suit  // Fixed index
 		passed := false
-		activePlayer := round.Dealer
+		activePlayer := (round.Dealer + 1) % 4  // Start with player left of dealer
+		
 		for {
 			player := round.Players[activePlayer]
 			if player.ComputerPlayer {
@@ -252,14 +246,16 @@ func main() {
 					action := player.CallOrPass(passedSuit, activePlayer%2 == round.Dealer%2)
 					if action != Pass {
 						round.Trump = passedSuit
-						round.Alone = false
+						round.Caller = player
+						round.Alone = action == Alone
 						break
 					}
 				} else {
 					call, suit := player.DeclareTrump(passedSuit)
 					if call != Pass {
 						round.Trump = suit
-						round.Alone = false
+						round.Caller = player
+						round.Alone = call == Alone
 						break
 					}
 				}
@@ -269,14 +265,11 @@ func main() {
 					round.Deck.Cards[0].FaceUp = false
 				}
 			} else {
-				// Human turn to decide — stop here, show call buttons
+				// Human turn to decide
 				callButtons.Show()
 				break
 			}
 		}
-
-		// Show updated hand after bidding
-		updateHumanHand(human, trick, handBox, trickBoxes, round, myWindow)
 	})
 	controlBox.Add(newGameBtn)
 
