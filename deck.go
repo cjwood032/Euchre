@@ -84,58 +84,62 @@ func (d *Deck) DealQuantity(quantity int) *Deck {
 	return hand
 }
 
-func (d *Deck) GetWScore(trump Suit) int { // todo move into calculation
+
+
+func (cm *CardMap) GetWScore(trump Suit) int {
 	// Right bower is worth 3 points
 	// Left bower is worth 3 points if there is other trump, otherwise it is worth 2
 	// All other trump is worth 2 points
 	// Offsuit Aces are worth 1 point each
 	// Being short-suited/void is worth 1 point for each suit.
 	// We also add the value of trump if ordering to partner, or subtract when ordering to opponent but that will be in the call.
-
 	score := 0
 	hasTrump := false
 	hasLeft := false
-	suitsPresent := make(map[Suit]bool)
-	for _ ,card := range d.Cards {
-		//suitsPresent[card.Suit] = true shouldn't count the left bower
-		
-		if (card.Suit == trump && card.Rank==11){
-			score += 3
-			hasTrump = true;
-			suitsPresent[card.Suit] = true
-		} else if card.Suit == trump {
-			score += 2
-			hasTrump = true;
-			suitsPresent[card.Suit] = true
-		} else if card.Rank ==11 && card.SameColor(trump) {
-			hasLeft = true;
-			suitsPresent[trump] = true
-		} else if card.Rank == 1 {
-			score += 1
-			suitsPresent[card.Suit] = true
-		} else {
-			suitsPresent[card.Suit] = true
-		}
-		 
 
-	}
-	allSuits := []Suit{Spades, Diamonds, Clubs, Hearts}
-	var missing []Suit
+	for suit := Spades; suit <= Hearts; suit++ {
+		for rank := 1; rank <= 13; rank++ {
+			if !cm.Hand[suit][rank] {
+				continue
+			}
 
-	for _, suit := range allSuits {
-		if !suitsPresent[suit] {
-			missing = append(missing, suit)
+			// Right bower
+			if suit == trump && rank == 11 {
+				score += 3
+				hasTrump = true
+			} else if suit.SameColor(trump) && suit != trump && rank == 11 {
+				// Left bower (will count as trump)
+				hasLeft = true
+			} else if suit == trump {
+				score += 2
+				hasTrump = true
+			} else if rank == 1 {
+				// Offsuit ace
+				score += 1
+			}
 		}
 	}
-	score += len(missing)
-	if (hasTrump && hasLeft){
+
+	// Add bonus for left bower based on whether we have other trump
+	if hasLeft && hasTrump {
 		score += 3
 	} else if hasLeft {
-		score +=2
+		score += 2
 	}
+
+	// Add points for void suits
+	suitCounts := cm.CountSuits(trump)
+	for _, count := range suitCounts {
+		if count == 0 {
+			score += 1
+		}
+	}
+
 	return score
 }
-func (d *Deck) BestTrumpScore(excludedSuit Suit) (bestSuit Suit, bestScore int) {
+
+
+func (cm *CardMap) BestTrumpScore(excludedSuit Suit) (bestSuit Suit, bestScore int) {
 	allSuits := []Suit{Spades, Diamonds, Clubs, Hearts}
 	bestScore = -1 // initialize lower than possible score
 
@@ -143,7 +147,7 @@ func (d *Deck) BestTrumpScore(excludedSuit Suit) (bestSuit Suit, bestScore int) 
 		if suit == excludedSuit {
 			continue
 		}
-		score := d.GetWScore(suit)
+		score := cm.GetWScore(suit)
 		
 		if score > bestScore {
 			bestScore = score

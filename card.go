@@ -30,8 +30,9 @@ type Card struct {
 	Rank int
 	Suit Suit
 	FaceUp bool
-	Known bool // known cards for calculation
+	
 }
+
 
 func NewCard(rank int, suit Suit) *Card {
 	if (rank < 1 || rank > 13) {
@@ -57,7 +58,16 @@ func (c *Card) SameColor(trump Suit) bool {
 
 	return false
 }
+func (suit *Suit) SameColor(trump Suit) bool {
+	if ((*suit == Clubs && trump == Spades) || 
+		(*suit == Spades && trump == Clubs) ||
+		(*suit == Hearts && trump == Diamonds) ||
+		(*suit == Diamonds && trump == Hearts)) {
+		return true
+	}
 
+	return false
+}
 func (c *Card) TurnFaceUp() {
 	c.FaceUp = true
 }

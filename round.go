@@ -24,8 +24,8 @@ func (round *Round) Deal() {
 	
 	round.Deck.Shuffle()
 	// starting with the player to the left of the dealer 
-	for seat := 0; seat < len(round.Players); seat++ {
-		round.Players[seat].Hand = round.Deck.DealQuantity(5) // deal the appropriate amount
+	for _, player := range round.Players {
+		player.Hand = round.Deck.DealQuantity(5) // deal the appropriate amount
 	}
 	round.Deck.Cards[0].TurnFaceUp()
 }

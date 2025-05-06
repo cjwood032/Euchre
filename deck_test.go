@@ -63,53 +63,77 @@ func TestPlayCardFromDeck(t *testing.T) {
 
 func TestGetWScore(t *testing.T) {
 	trump := Diamonds
-	Card1 := NewCard(11,Diamonds)
-	Card2 := NewCard(1,Clubs)
-	Card3 := NewCard(9,Clubs)
-	Card4 := NewCard(13,Spades)
-	Card5 := NewCard(12,Hearts)
-	newDeck := &Deck{Cards: []*Card{Card1, Card2, Card3, Card4, Card5}}
-	wScore := newDeck.GetWScore(trump);
+	card1 := NewCard(11,Diamonds)
+	card2 := NewCard(1,Clubs)
+	card3 := NewCard(9,Clubs)
+	card4 := NewCard(13,Spades)
+	card5 := NewCard(12,Hearts)
+	newMap:= &CardMap{}
+	newMap.AddToHand(card1)
+	newMap.AddToHand(card2)
+	newMap.AddToHand(card3)
+	newMap.AddToHand(card4)
+	newMap.AddToHand(card5)
+	wScore := newMap.GetWScore(trump);
 	assert.Equal(t,4,wScore)
 }
 func TestGetWScoreWithLeft(t *testing.T) {
 	trump := Diamonds
-	Card1 := NewCard(11,Diamonds)
-	Card2 := NewCard(1,Clubs)
-	Card3 := NewCard(9,Hearts)
-	Card4 := NewCard(13,Spades)
-	Card5 := NewCard(11,Hearts)
-	newDeck := &Deck{Cards: []*Card{Card1, Card2, Card3, Card4, Card5}}
-	wScore := newDeck.GetWScore(trump);
+	card1 := NewCard(11,Diamonds)
+	card2 := NewCard(1,Clubs)
+	card3 := NewCard(9,Hearts)
+	card4 := NewCard(13,Spades)
+	card5 := NewCard(11,Hearts)
+	newMap:= &CardMap{}
+	newMap.AddToHand(card1)
+	newMap.AddToHand(card2)
+	newMap.AddToHand(card3)
+	newMap.AddToHand(card4)
+	newMap.AddToHand(card5)
+	wScore := newMap.GetWScore(trump);
 	assert.Equal(t,7,wScore)
-	newDeck.Cards[0] = NewCard(10, Hearts)
-	wScore = newDeck.GetWScore(trump);
+	newMap.RemoveFromHand(card1)
+	card6 := NewCard(10, Hearts)
+	newMap.AddToHand(card6)
+	wScore = newMap.GetWScore(trump);
 	assert.Equal(t,3,wScore) // - 3 for no right, -1 for left losing a point
 }
 func TestGetWScoreWithVoidSuits(t *testing.T) {
 	trump := Diamonds
-	Card1 := NewCard(11,Diamonds)
-	Card2 := NewCard(1,Clubs)
-	Card3 := NewCard(9,Hearts)
-	Card4 := NewCard(13,Spades)
-	Card5 := NewCard(10,Diamonds)
-	newDeck := &Deck{Cards: []*Card{Card1, Card2, Card3, Card4, Card5}}
-	wScore := newDeck.GetWScore(trump);
+	card1 := NewCard(11,Diamonds)
+	card2 := NewCard(1,Clubs)
+	card3 := NewCard(9,Hearts)
+	card4 := NewCard(13,Spades)
+	card5 := NewCard(10,Diamonds)
+	newMap:= &CardMap{}
+	newMap.AddToHand(card1)
+	newMap.AddToHand(card2)
+	newMap.AddToHand(card3)
+	newMap.AddToHand(card4)
+	newMap.AddToHand(card5)
+	wScore := newMap.GetWScore(trump);
 	assert.Equal(t,6,wScore)
-	newDeck.Cards[2] = NewCard(10, Clubs)
-	wScore = newDeck.GetWScore(trump);
+	newMap.RemoveFromHand(card3)
+	card6 := NewCard(10, Clubs)
+	newMap.AddToHand(card6)
+	wScore = newMap.GetWScore(trump);
 	assert.Equal(t,7,wScore) 
 }
 
 func TestBestTrumpScore(t *testing.T) {
 	trump := Diamonds
-	Card1 := NewCard(11,Diamonds)
-	Card2 := NewCard(1,Clubs)
-	Card3 := NewCard(9,Clubs)
-	Card4 := NewCard(13,Spades)
-	Card5 := NewCard(12,Hearts)
-	newDeck := &Deck{Cards: []*Card{Card1, Card2, Card3, Card4, Card5}}
-	suit, score := newDeck.BestTrumpScore(trump);
+	card1 := NewCard(11,Diamonds)
+	card2 := NewCard(1,Clubs)
+	card3 := NewCard(9,Clubs)
+	card4 := NewCard(13,Spades)
+	card5 := NewCard(12,Hearts)
+	newMap:= &CardMap{}
+	newMap.AddToHand(card1)
+	newMap.AddToHand(card2)
+	newMap.AddToHand(card3)
+	newMap.AddToHand(card4)
+	newMap.AddToHand(card5)
+	suit, score := newMap.BestTrumpScore(trump);
 	assert.Equal(t,Hearts, suit)
 	assert.Equal(t,7,score)
 }
