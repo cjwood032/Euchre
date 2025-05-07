@@ -1,7 +1,7 @@
 package main
 
-
 type Call int
+
 const (
 	Pass Call = iota
 	OrderUp
@@ -9,25 +9,34 @@ const (
 )
 
 type Player struct {
-	Name string
-	CardMap CardMap
-	CardsInSuit map[Suit]int
-	Score int
-	Wins int
-	Losses int
+	Name           string
+	CardMap        CardMap
+	CardsInSuit    map[Suit]int
+	Score          int
+	Wins           int
+	Losses         int
 	ComputerPlayer bool
-	TricksWon int
+	TricksWon      int
 }
 
 var minimumScore = 7
 var lonerScore = 10
 
 func (player *Player) PlayCard(card *Card) *Card {
-	player.CardMap.RemoveFromHand(card)
+	player.CardMap.RemoveFromHand(*card)
 	return card
 }
-
-func (player *Player)CallOrPass(trump Suit, teamPickup bool ) Call {
+func (call Call) FriendlyCall() string {
+	switch call {
+	case OrderUp:
+		return "Pick up"
+	case Alone:
+		return "Going alone"
+	default:
+		return "Pass"
+	}
+}
+func (player *Player) CallOrPass(trump Suit, teamPickup bool) Call {
 	wScore := player.CardMap.GetWScore(trump)
 	//todo, sit if your to the left of the dealer and you're stronger in next
 	if teamPickup {
@@ -38,30 +47,22 @@ func (player *Player)CallOrPass(trump Suit, teamPickup bool ) Call {
 	return DetermineCall(wScore)
 }
 
-func (player *Player)DeclareTrump(unavailableSuit Suit) (Call, Suit) {
+func (player *Player) DeclareTrump(unavailableSuit Suit) (Call, Suit) {
 	suit, score := player.CardMap.BestTrumpScore(unavailableSuit)
 	return DetermineCall(score), suit
 }
 
-func (player *Player) PickUp(card *Card) *Card {
-	player.CardMap.AddToHand(card)
-	return player.DiscardCard(card)
+func (player *Player) PickUp(card *Card) {
+	player.chooseDiscard(card)
 }
 
 func (player *Player) InitCardMap() {
-    player.CardMap = CardMap{
-        Hand: [4][14]bool{},  // Clears all cards from hand
-        Seen: [4][14]bool{},  // Clears all seen cards
-    }
-    player.CardsInSuit = make(map[Suit]int)
-    player.TricksWon = 0
-}
-
-func (player *Player) DiscardCard(card *Card) *Card {
-		player.CardMap.RemoveFromHand(card)
-		return card
-	
-	
+	player.CardMap = CardMap{
+		Hand: [4][14]bool{}, // Clears all cards from hand
+		Seen: [4][14]bool{}, // Clears all seen cards
+	}
+	player.CardsInSuit = make(map[Suit]int)
+	player.TricksWon = 0
 }
 
 func DetermineCall(score int) Call {
@@ -76,11 +77,11 @@ func DetermineCall(score int) Call {
 // Determine who still has to play from currentCards
 // who is the team that called
 // who is winning the trick?
-// if player's team is winning how strong is the winning card? 
+// if player's team is winning how strong is the winning card?
 // if player has the suit still
 // if player's team is not winning, or the winning card is weak Q or less, play strongest card that can win
 // if player's team is winning, play lowest card if
-// if player does not have the suit 
+// if player does not have the suit
 // if player's team is not winning, play trump to win
 // if player's team is winning, play to short suit if player has only one card in another non-trump suit, otherwise throw low non-trump
 func (player *Player) BestPlay(currentTrick []*Card, round Round) Card {
@@ -214,7 +215,7 @@ func findShortSuit(cardMap CardMap, trump Suit) Suit {
 		}
 	}
 	return -1
-}	
+}
 
 func getCardInSuit(cardMap CardMap, suit Suit, lowest bool) Card {
 	cards := cardMap.CardsInSuit(suit)
@@ -227,7 +228,6 @@ func getCardInSuit(cardMap CardMap, suit Suit, lowest bool) Card {
 	return getStrongest(cards, suit)
 }
 
-
 func (player *Player) getPartner(players []*Player) *Player {
 	for i, p := range players {
 		if p == player {
@@ -238,4 +238,15 @@ func (player *Player) getPartner(players []*Player) *Player {
 		}
 	}
 	return nil
+}
+
+func (player *Player) chooseDiscard(card *Card) {
+	shortSuit := findShortSuit(player.CardMap, card.Suit)
+	player.CardMap.AddToHand(card)
+	var discardCard Card
+	if shortSuit != -1 {
+		discardCard = getCardInSuit(player.CardMap, shortSuit, true)
+	}
+	discardCard = getLowest(player.CardMap.ToSlice(), card.Suit)
+	player.CardMap.RemoveFromHand(discardCard)
 }

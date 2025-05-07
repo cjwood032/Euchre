@@ -5,7 +5,6 @@ type CardMap struct {
 	Seen [4][14]bool // [Suit][Rank] - cards the player has seen
 }
 
-
 func (cm *CardMap) AddToHand(card *Card) {
 	cm.Hand[card.Suit][card.Rank] = true
 }
@@ -16,7 +15,7 @@ func (cm *CardMap) AddCardsToHand(cards *Deck) {
 	}
 }
 
-func (cm *CardMap) RemoveFromHand(card *Card) {
+func (cm *CardMap) RemoveFromHand(card Card) {
 	cm.Hand[card.Suit][card.Rank] = false
 	cm.Seen[card.Suit][card.Rank] = true // Also mark as seen
 }
@@ -59,7 +58,6 @@ func (cm *CardMap) CountSuits(trump Suit) map[Suit]int {
 	return counts
 }
 
-
 func (cm *CardMap) hasLeftBower(trump Suit) bool {
 
 	cardSuit := trump.GetWeakColor()
@@ -96,7 +94,6 @@ func (cm CardMap) CountSuit(suit Suit) int {
 	}
 	return count
 }
-
 
 func (cm *CardMap) GetWScore(trump Suit) int {
 	// Right bower is worth 3 points
@@ -159,7 +156,7 @@ func (cm *CardMap) BestTrumpScore(excludedSuit Suit) (bestSuit Suit, bestScore i
 			continue
 		}
 		score := cm.GetWScore(suit)
-		
+
 		if score > bestScore {
 			bestScore = score
 			bestSuit = suit
@@ -170,17 +167,17 @@ func (cm *CardMap) BestTrumpScore(excludedSuit Suit) (bestSuit Suit, bestScore i
 }
 
 func (cm *CardMap) Sort(suit Suit, isTrump bool) []*Card {
-	
+
 	hasLeft := cm.hasLeftBower(suit)
 	hasRight := false
-	hasAce :=false
+	hasAce := false
 	var cards []*Card
 	for rank := 0; rank < 14; rank++ {
 		if cm.Hand[suit][rank] {
 			if rank == 1 {
-				hasAce = true;
-			}else if rank == 11{
-				hasRight = true;
+				hasAce = true
+			} else if rank == 11 {
+				hasRight = true
 			} else {
 				cards = append(cards, &Card{Suit: suit, Rank: rank})
 			}
@@ -195,7 +192,7 @@ func (cm *CardMap) Sort(suit Suit, isTrump bool) []*Card {
 	if hasRight && isTrump {
 		cards = append(cards, &Card{Suit: suit, Rank: 11})
 	}
-	
+
 	return cards
 }
 
@@ -236,5 +233,3 @@ func (cm *CardMap) getStrongestOffsuit(trump Suit) *Card {
 
 	return nil
 }
-
-	
