@@ -186,17 +186,16 @@ func (r *Round) ComputerTrumpSelection(decision Call, suit Suit) {
 
 		r.SelectingTrump = false
 	case Pass:
-		r.ActivePlayer = (r.ActivePlayer + 1) % 4
 		if r.ActivePlayer == r.Dealer { // All players have passed
 			if len(r.Deck.Cards) > 0 && r.Deck.Cards[0].FaceUp {
 				// First round passed - flip card and go to second round
 				r.Deck.Cards[0].FaceUp = false
-				r.ActivePlayer = (r.Dealer + 1) % 4
 			} else {
 				// Second round passed - redeal
 				r.SelectingTrump = false // ... existing pass logic ...
 			}
 		}
+		r.ActivePlayer = (r.ActivePlayer + 1) % 4
 	}
 }
 
