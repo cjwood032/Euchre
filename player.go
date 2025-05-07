@@ -61,7 +61,6 @@ func (player *Player) InitCardMap() {
 		Hand: [4][14]bool{}, // Clears all cards from hand
 		Seen: [4][14]bool{}, // Clears all seen cards
 	}
-	player.CardsInSuit = make(map[Suit]int)
 	player.TricksWon = 0
 }
 
@@ -74,16 +73,6 @@ func DetermineCall(score int) Call {
 	return Pass
 }
 
-// Determine who still has to play from currentCards
-// who is the team that called
-// who is winning the trick?
-// if player's team is winning how strong is the winning card?
-// if player has the suit still
-// if player's team is not winning, or the winning card is weak Q or less, play strongest card that can win
-// if player's team is winning, play lowest card if
-// if player does not have the suit
-// if player's team is not winning, play trump to win
-// if player's team is winning, play to short suit if player has only one card in another non-trump suit, otherwise throw low non-trump
 func (player *Player) BestPlay(currentTrick []*Card, round Round) Card {
 	if len(currentTrick) == 0 {
 		//we lead

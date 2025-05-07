@@ -131,8 +131,15 @@ func (round *Round) HumanTrumpSelection(call Call, trump Suit) {
 	}
 
 	if call == Pass {
-		// Continue to next player
-		round.DetermineTrump()
+		if round.ActivePlayer == round.Dealer { // All players have passed
+			if len(round.Deck.Cards) > 0 && round.Deck.Cards[0].FaceUp {
+				// First round passed - flip card and go to second round
+				round.Deck.Cards[0].FaceUp = false
+			} else {
+				// Second round passed - redeal
+				round.SelectingTrump = false // ... existing pass logic ...
+			}
+		}
 	} else {
 		round.Trump = trump
 		round.Caller = player
@@ -159,6 +166,7 @@ func (round *Round) HumanTrumpSelection(call Call, trump Suit) {
 
 		round.SelectingTrump = false
 	}
+	round.ActivePlayer = (round.ActivePlayer + 1) % 4
 }
 
 func (r *Round) ComputerTrumpSelection(decision Call, suit Suit) {

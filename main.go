@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
+	"strings"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
-	"strings"
 )
 
 func main() {
@@ -76,13 +77,16 @@ func main() {
 		ui.Round = ui.Game.Rounds[len(ui.Game.Rounds)-1]
 		ui.Trick = make([]*Card, 4)
 
-		// Clear any existing UI state
+		// Complete UI reset
+		ui.HandBox.Objects = []fyne.CanvasObject{container.NewHBox()}
 		ui.CenterNorth.Objects = nil
 		ui.CenterEast.Objects = nil
 		ui.CenterSouth.Objects = nil
 		ui.CenterWest.Objects = nil
+		ui.KittyContainer.Objects = nil
 
-		// Force refresh
+		// Force complete rebuild
+		ui.Window.SetContent(ui.MainContent)
 		ui.RefreshUI()
 	})
 	// Create player areas with dealer indicator
@@ -109,26 +113,28 @@ func main() {
 	// Store references in the UI struct
 	ui.NewGameBtn = newGameBtn
 	ui.SouthHandBox = handBox
-	ui.BottomArea = container.NewVBox(
-		container.NewCenter(south),
-		handBox,
-		container.NewCenter(newGameBtn),
-	)
+	// Create a centered container for the player's hand
+	handContainer := container.NewHBox()
+	ui.HandBox = container.NewCenter(handContainer) // Now centered
 
-	// Bottom area
-	bottomArea := container.NewVBox(
-		container.NewCenter(south),
-		ui.HandBox,
-		container.NewCenter(newGameBtn),
-	)
+	// Bottom area with centered hand
+	// Create controls section (topmost)
+	// Create controls section at the very top
+	controls := container.NewCenter(newGameBtn)
 
-	// Main content
+	// Main content with clear hierarchy
 	ui.MainContent = container.NewBorder(
-		container.NewCenter(north), // Top
-		bottomArea,                 // Bottom
-		container.NewCenter(west),  // Left
-		container.NewCenter(east),  // Right
-		centerArea,                 // Center
+		container.NewVBox( // Top section
+			controls, // New Game button at very top
+			container.NewCenter(north),
+		),
+		container.NewVBox( // Bottom section
+			container.NewCenter(south),
+			ui.HandBox, // Centered hand (only one instance)
+		),
+		container.NewCenter(west), // Left
+		container.NewCenter(east), // Right
+		centerArea,                // Center
 	)
 
 	// Initial UI setup

@@ -33,13 +33,12 @@ func (game *Game) NewGame(changeTeams bool) {
 		game.RotateSeats()
 	}
 
-	// Clear all player states
+	// Clear all player hands
 	for _, player := range game.Players {
-		player.InitCardMap() // This now clears hands
+		player.InitCardMap() // This clears the CardMap
 		player.Score = 0
 		player.TricksWon = 0
 	}
-	game.Rounds = nil
 
 	// Reset dealer and start new round
 	game.Dealer = rand.Intn(len(game.Players))
