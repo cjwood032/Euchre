@@ -2,13 +2,12 @@ package main
 
 import (
 	"fmt"
-	"strings"
-
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
+	"strings"
 )
 
 func main() {
@@ -71,13 +70,6 @@ func main() {
 	ui.SouthScore = widget.NewLabel(fmt.Sprintf("Score: %d", players[2].Score))
 	ui.WestScore = widget.NewLabel(fmt.Sprintf("Score: %d", players[3].Score))
 
-	// Create player areas
-	north := container.NewHBox(widget.NewLabel("NORTH"), ui.NorthScore)
-	east := container.NewHBox(widget.NewLabel("EAST"), ui.EastScore)
-	south := container.NewHBox(widget.NewLabel("SOUTH"), ui.SouthScore)
-	west := container.NewHBox(widget.NewLabel("WEST"), ui.WestScore)
-
-	// New Game button
 	// New Game button
 	newGameBtn := widget.NewButton("New Game", func() {
 		ui.Game.NewGame(false)
@@ -93,7 +85,27 @@ func main() {
 		// Force refresh
 		ui.RefreshUI()
 	})
-
+	// Create player areas with dealer indicator
+	north := container.NewHBox(
+		widget.NewLabel("NORTH"),
+		ui.createDealerIndicator(0),
+		ui.NorthScore,
+	)
+	east := container.NewHBox(
+		widget.NewLabel("EAST"),
+		ui.createDealerIndicator(1),
+		ui.EastScore,
+	)
+	south := container.NewHBox(
+		widget.NewLabel("SOUTH"),
+		ui.createDealerIndicator(2),
+		ui.SouthScore,
+	)
+	west := container.NewHBox(
+		widget.NewLabel("WEST"),
+		ui.createDealerIndicator(3),
+		ui.WestScore,
+	)
 	// Store references in the UI struct
 	ui.NewGameBtn = newGameBtn
 	ui.SouthHandBox = handBox

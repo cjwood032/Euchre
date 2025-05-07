@@ -28,10 +28,14 @@ type GameUI struct {
 	SouthScore     *widget.Label
 	WestScore      *widget.Label
 
-	Trick        []*Card
-	NewGameBtn   *widget.Button
-	SouthHandBox *fyne.Container
-	BottomArea   *fyne.Container
+	Trick                []*Card
+	NewGameBtn           *widget.Button
+	SouthHandBox         *fyne.Container
+	BottomArea           *fyne.Container
+	NorthDealerIndicator *widget.Label
+	EastDealerIndicator  *widget.Label
+	SouthDealerIndicator *widget.Label
+	WestDealerIndicator  *widget.Label
 }
 
 func (ui *GameUI) RefreshUI() {
@@ -45,6 +49,7 @@ func (ui *GameUI) RefreshUI() {
 
 	// Clear trick display
 	ui.updateTrickDisplay(make([]*Card, 4))
+	ui.updateDealerIndicators()
 	// fyne 2.6 needs this called
 	go func() {
 		fyne.Do(func() {
@@ -56,11 +61,7 @@ func (ui *GameUI) RefreshUI() {
 	}()
 
 	// Show normal game UI first
-	go func() {
-		fyne.Do(func() {
-			ui.Window.SetContent(ui.MainContent)
-		})
-	}()
+	ui.Window.SetContent(ui.MainContent)
 
 	if !ui.Round.SelectingTrump {
 		if ui.Round.Dealer == 2 && len(ui.Round.Players[2].CardMap.ToSlice()) > 5 {
@@ -440,4 +441,67 @@ func (ui *GameUI) playComputerTurn() {
 	}
 
 	ui.RefreshUI()
+}
+
+func (ui *GameUI) createDealerIndicator(position int) *widget.Label {
+	indicator := widget.NewLabel("")
+	indicator.Hide() // Start hidden
+
+	// Store reference to update later
+	switch position {
+	case 0:
+		ui.NorthDealerIndicator = indicator
+	case 1:
+		ui.EastDealerIndicator = indicator
+	case 2:
+		ui.SouthDealerIndicator = indicator
+	case 3:
+		ui.WestDealerIndicator = indicator
+	}
+
+	return indicator
+}
+
+func (ui *GameUI) updateDealerIndicators() {
+	// Hide all indicators first
+	if ui.NorthDealerIndicator != nil {
+		ui.NorthDealerIndicator.Hide()
+	}
+	if ui.EastDealerIndicator != nil {
+		ui.EastDealerIndicator.Hide()
+	}
+	if ui.SouthDealerIndicator != nil {
+		ui.SouthDealerIndicator.Hide()
+	}
+	if ui.WestDealerIndicator != nil {
+		ui.WestDealerIndicator.Hide()
+	}
+
+	// Show only for current dealer
+	if ui.Round == nil {
+		return
+	}
+
+	switch ui.Round.Dealer {
+	case 0:
+		if ui.NorthDealerIndicator != nil {
+			ui.NorthDealerIndicator.SetText("(Dealer)")
+			ui.NorthDealerIndicator.Show()
+		}
+	case 1:
+		if ui.EastDealerIndicator != nil {
+			ui.EastDealerIndicator.SetText("(Dealer)")
+			ui.EastDealerIndicator.Show()
+		}
+	case 2:
+		if ui.SouthDealerIndicator != nil {
+			ui.SouthDealerIndicator.SetText("(Dealer)")
+			ui.SouthDealerIndicator.Show()
+		}
+	case 3:
+		if ui.WestDealerIndicator != nil {
+			ui.WestDealerIndicator.SetText("(Dealer)")
+			ui.WestDealerIndicator.Show()
+		}
+	}
 }
