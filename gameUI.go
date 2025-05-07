@@ -205,28 +205,39 @@ func (ui *GameUI) showTrumpSelection() {
 }
 
 func (ui *GameUI) updateTrickDisplay(trick []*Card) {
-	ui.CenterNorth.Objects = nil
-	ui.CenterEast.Objects = nil
-	ui.CenterSouth.Objects = nil
-	ui.CenterWest.Objects = nil
+	// Clear only if we're passing an empty trick
+	if len(trick) == 0 {
+		ui.CenterNorth.Objects = nil
+		ui.CenterEast.Objects = nil
+		ui.CenterSouth.Objects = nil
+		ui.CenterWest.Objects = nil
+		return
+	}
 
+	// Otherwise, update each position with current card
+	cardSize := fyne.NewSize(80, 120)
 	for i, card := range trick {
 		if card == nil {
 			continue
 		}
 
-		cardSize := fyne.NewSize(80, 120)
 		switch i {
 		case 0: // North
-			ui.CenterNorth.Add(renderCardImage(card, cardSize))
+			ui.CenterNorth.Objects = []fyne.CanvasObject{renderCardImage(card, cardSize)}
 		case 1: // East
-			ui.CenterEast.Add(renderCardImage(card, cardSize))
+			ui.CenterEast.Objects = []fyne.CanvasObject{renderCardImage(card, cardSize)}
 		case 2: // South
-			ui.CenterSouth.Add(renderCardImage(card, cardSize))
+			ui.CenterSouth.Objects = []fyne.CanvasObject{renderCardImage(card, cardSize)}
 		case 3: // West
-			ui.CenterWest.Add(renderCardImage(card, cardSize))
+			ui.CenterWest.Objects = []fyne.CanvasObject{renderCardImage(card, cardSize)}
 		}
 	}
+
+	// Refresh all containers
+	ui.CenterNorth.Refresh()
+	ui.CenterEast.Refresh()
+	ui.CenterSouth.Refresh()
+	ui.CenterWest.Refresh()
 }
 
 func (ui *GameUI) showComputerDecision(player *Player, decision string, suit Suit) {
@@ -307,87 +318,21 @@ func (ui *GameUI) processComputerTrumpSelection() {
 	// Process the decision
 	if decision == Pass {
 		ui.Round.ComputerTrumpSelection(decision, suit)
-		// If it's now human's turn, show the selection UI
 		if ui.Round.SelectingTrump && ui.Round.ActivePlayer == 2 {
 			ui.showTrumpSelection()
-			return
-		}
-		// Continue processing if there are more computer players
-		if ui.Round.SelectingTrump && ui.Round.ActivePlayer != 2 {
-			time.AfterFunc(500*time.Millisecond, ui.processComputerTrumpSelection)
 		}
 	} else {
 		ui.Round.ComputerTrumpSelection(decision, suit)
+		// Force immediate UI refresh after computer selects trump
 		ui.RefreshUI()
+
+		// If human is dealer and computer ordered up, show discard UI
+		if ui.Round.Dealer == 2 && len(ui.Round.Deck.Cards) > 0 &&
+			ui.Round.Deck.Cards[0].FaceUp && decision == OrderUp {
+			ui.showDiscardSelection()
+		}
 	}
 }
-
-/*func (ui *GameUI) processComputerTrumpSelection() {
-	for ui.Round.SelectingTrump {
-		currentPlayer := ui.Round.Players[ui.Round.ActivePlayer]
-		if ui.Round.ActivePlayer == 2 { // Human player's position
-			ui.RefreshUI()
-			return
-		}
-		if currentPlayer.ComputerPlayer {
-			var decision Call
-			var suit Suit
-
-			if len(ui.Round.Deck.Cards) > 0 && ui.Round.Deck.Cards[0].FaceUp {
-				// First round decision
-				suit = ui.Round.Deck.Cards[0].Suit
-				decision = currentPlayer.CallOrPass(suit, ui.Round.Dealer%2 == ui.Round.ActivePlayer%2)
-			} else {
-				// Second round decision
-				passedSuit := Suit(-1)
-				if len(ui.Round.Deck.Cards) > 0 {
-					passedSuit = ui.Round.Deck.Cards[0].Suit
-				}
-				call, selectedSuit := currentPlayer.DeclareTrump(passedSuit)
-				decision = call
-				suit = selectedSuit
-			}
-			if decision == OrderUp || decision == Alone {
-				// If computer ordered and human is dealer
-				if ui.Round.Dealer == 2 && len(ui.Round.Deck.Cards) > 0 && ui.Round.Deck.Cards[0].FaceUp {
-					// Human needs to pick up and discard
-					ui.Round.Players[2].PickUp(ui.Round.Deck.Cards[0])
-					ui.Round.Deck.Cards = ui.Round.Deck.Cards[1:]
-					ui.showDiscardSelection()
-					return // Stop computer processing to wait for human
-				} else if ui.Round.ActivePlayer == ui.Round.Dealer {
-					// Computer dealer auto-discards
-					pickedCard := ui.Round.Deck.Cards[0]
-					currentPlayer.PickUp(pickedCard)
-					// ... auto-discard logic ...
-				}
-				ui.Round.BeginPlay(decision, suit)
-			}
-
-			ui.Window.SetContent(ui.MainContent)
-			// Show the computer's decision
-			ui.showComputerDecision(currentPlayer, decision.FriendlyCall(), suit)
-
-			// Process the decision
-			if len(ui.Round.Deck.Cards) > 0 && ui.Round.Deck.Cards[0].FaceUp {
-				suit = ui.Round.Deck.Cards[0].Suit
-				call := currentPlayer.CallOrPass(suit, ui.Round.Dealer%2 == ui.Round.ActivePlayer%2)
-				ui.Round.ComputerTrumpSelection(call, suit)
-			} else {
-				passedSuit := Suit(-1)
-				if len(ui.Round.Deck.Cards) > 0 {
-					passedSuit = ui.Round.Deck.Cards[0].Suit
-				}
-				call, suit := currentPlayer.DeclareTrump(passedSuit)
-				ui.Round.ComputerTrumpSelection(call, suit)
-			}
-
-			time.Sleep(500 * time.Millisecond) // Pause between turns
-		} else {
-			break // Human player's turn
-		}
-	}
-}*/
 
 func (ui *GameUI) showCardPickup() {
 	if len(ui.Round.Deck.Cards) == 0 {
@@ -490,7 +435,10 @@ func (ui *GameUI) playComputerTurn() {
 	// Computer makes play
 	computer := ui.Round.Players[ui.Round.ActivePlayer]
 	play := computer.BestPlay(partialTrick, *ui.Round)
-	ui.Trick[ui.Round.ActivePlayer] = computer.PlayCard(&play)
+	playedCard := computer.PlayCard(&play)
+	ui.Trick[ui.Round.ActivePlayer] = playedCard // Store the played card
+
+	// Update the display with all cards in the trick
 	ui.updateTrickDisplay(ui.Trick)
 
 	// Move to next player
@@ -502,8 +450,10 @@ func (ui *GameUI) playComputerTurn() {
 		ui.Round.Lead = winner
 		ui.Round.ActivePlayer = winner
 
+		// Keep cards visible for a moment before clearing
 		time.Sleep(1 * time.Second)
-		ui.Trick = make([]*Card, 4)
+		ui.Trick = make([]*Card, 4)     // Clear trick for next round
+		ui.updateTrickDisplay(ui.Trick) // Update display to show cleared trick
 	}
 
 	ui.RefreshUI()
@@ -577,6 +527,7 @@ func (ui *GameUI) clearTrumpSelection() {
 	ui.Window.SetContent(ui.MainContent)
 	ui.RefreshUI()
 }
+
 func (ui *GameUI) showDiscardSelection() {
 	if ui.Round.Dealer != 2 || len(ui.Players[2].CardMap.ToSlice()) <= 5 {
 		return // Not human dealer or no card to discard

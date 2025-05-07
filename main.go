@@ -196,11 +196,12 @@ func renderCardBack(size fyne.Size) *canvas.Image {
 }
 
 func createStackedKitty(round *Round, size fyne.Size) *fyne.Container {
-	// Don't show kitty if trump has been selected
-	if !round.SelectingTrump && len(round.Deck.Cards) > 0 && round.Deck.Cards[0].FaceUp {
-		return container.NewPadded() // Empty container
+	// Hide kitty when trump has been selected and play has begun
+	if !round.SelectingTrump {
+		return container.NewPadded() // Empty container when play begins
 	}
 
+	// Only show kitty during trump selection phase
 	stack := container.NewWithoutLayout()
 	offset := float32(8)
 

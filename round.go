@@ -147,16 +147,12 @@ func (round *Round) HumanTrumpSelection(call Call, trump Suit) {
 			round.Alone = true
 		}
 
-		// If this is first round and card is face up, dealer picks it up
+		// If this is first round and card is face up
 		if len(round.Deck.Cards) > 0 && round.Deck.Cards[0].FaceUp {
 			if round.ActivePlayer == round.Dealer {
 				// Dealer is ordering - pick up card and discard one
 				pickedCard := round.Deck.Cards[0]
 				player.PickUp(pickedCard)
-
-				// Show discard UI (handled in gameUI)
-				round.SelectingTrump = false
-				return
 			} else {
 				// Non-dealer ordering - dealer picks up card
 				round.Players[round.Dealer].PickUp(round.Deck.Cards[0])
@@ -165,6 +161,7 @@ func (round *Round) HumanTrumpSelection(call Call, trump Suit) {
 		}
 
 		round.SelectingTrump = false
+		round.BeginPlay(call, trump) // This will hide the kitty
 	}
 	round.ActivePlayer = (round.ActivePlayer + 1) % 4
 }
@@ -174,6 +171,7 @@ func (r *Round) ComputerTrumpSelection(decision Call, suit Suit) {
 	case OrderUp, Alone:
 		r.Trump = suit
 		r.Caller = r.Players[r.ActivePlayer]
+		r.SelectingTrump = false
 		if decision == Alone {
 			r.Alone = true
 		}
@@ -248,6 +246,9 @@ func (round *Round) BeginPlay(call Call, trump Suit) {
 	round.ActivePlayer = round.Lead
 	round.Trump = trump
 	round.Alone = (call == Alone)
+	if len(round.Deck.Cards) > 0 {
+		round.Deck.Cards[0].TurnFaceDown()
+	}
 }
 
 func (round *Round) LeftOfDealer() int {
