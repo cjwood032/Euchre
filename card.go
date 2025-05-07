@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 )
 
@@ -58,6 +59,22 @@ func (c *Card) SameColor(trump Suit) bool {
 
 	return false
 }
+
+func (c *Card) FriendlyRank() string {
+    switch c.Rank {
+    case 1:
+        return "Ace"
+    case 11:
+        return "Jack"
+    case 12:
+        return "Queen"
+    case 13:
+        return "King"
+    default:
+        return fmt.Sprintf("%d", c.Rank)
+    }
+}
+
 func (suit *Suit) SameColor(trump Suit) bool {
 	if ((*suit == Clubs && trump == Spades) || 
 		(*suit == Spades && trump == Clubs) ||

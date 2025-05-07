@@ -12,6 +12,211 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
+func main() {
+	myApp := app.New()
+	myWindow := myApp.NewWindow("Euchre")
+	myWindow.SetPadded(true)
+
+	// Initialize players
+	players := []*Player{
+		{Name: "NORTH", ComputerPlayer: true},
+		{Name: "EAST", ComputerPlayer: true},
+		{Name: "SOUTH"},
+		{Name: "WEST", ComputerPlayer: true},
+	}
+
+	// Create game and initial round
+	game := CreateEuchreGame(players)
+	game.NewGame(false)
+	round := game.Rounds[len(game.Rounds)-1]
+
+	// UI elements
+	trick := make([]*Card, 4)
+	handBox := container.NewHBox()
+
+	// Center card positions
+	centerNorth := container.NewCenter()
+	centerEast := container.NewCenter()
+	centerSouth := container.NewCenter()
+	centerWest := container.NewCenter()
+
+	kittyContainer := container.NewCenter()
+centerArea := container.NewGridWithColumns(3,
+    container.NewGridWithRows(3,
+        container.NewCenter(),  // NW (empty)
+        centerWest,            // W
+        container.NewCenter(), // SW (empty)
+    ),
+    container.NewGridWithRows(3,
+        centerNorth,           // N
+        kittyContainer,        // Center (kitty will go here)
+        centerSouth,           // S
+    ),
+    container.NewGridWithRows(3,
+        container.NewCenter(),  // NE (empty)
+        centerEast,            // E
+        container.NewCenter(), // SE (empty)
+    ),
+)
+
+	// Player areas (just names and scores now)
+	north := container.NewVBox(
+		container.NewHBox(
+			widget.NewLabel("NORTH"), 
+			widget.NewLabel(fmt.Sprintf("Score: %d", players[0].Score)),
+		),
+	)
+
+	south := container.NewVBox(
+		container.NewHBox(
+			widget.NewLabel("SOUTH"), 
+			widget.NewLabel(fmt.Sprintf("Score: %d", players[2].Score)),
+		),
+	)
+
+	east := container.NewVBox(
+		container.NewHBox(
+			widget.NewLabel("EAST"),
+			widget.NewLabel(fmt.Sprintf("Score: %d", players[1].Score)),
+		),
+	)
+
+	west := container.NewVBox(
+		container.NewHBox(
+			widget.NewLabel("WEST"),
+			widget.NewLabel(fmt.Sprintf("Score: %d", players[3].Score)),
+		),
+	)
+
+	// Function to update trick display
+	updateTrickDisplay := func(trick []*Card) {
+		cardSize := fyne.NewSize(80, 120)
+		centerNorth.Objects = nil
+		centerEast.Objects = nil
+		centerSouth.Objects = nil
+		centerWest.Objects = nil
+
+		for i, card := range trick {
+			if card == nil {
+				continue
+			}
+
+			switch i {
+			case 0: // North
+				centerNorth.Add(renderCardImage(card, cardSize))
+			case 1: // East
+				centerEast.Add(renderCardImage(card, cardSize))
+			case 2: // South
+				centerSouth.Add(renderCardImage(card, cardSize))
+			case 3: // West
+				centerWest.Add(renderCardImage(card, cardSize))
+			}
+		}
+	}
+
+	// Single updateHumanHand function
+	var updateHumanHand func()
+
+	updateHumanHand = func() {
+	handBox.Objects = nil
+	cardSize := fyne.NewSize(80, 120)
+	player := players[2] // South is human player
+
+	for _, card := range player.CardMap.ToSlice() {
+		currentCard := card
+		cardUI := container.NewVBox(
+			renderCardImage(currentCard, cardSize),
+			widget.NewButton("Play", func() {
+				// Play the card (South is position 2)
+				trick[2] = player.PlayCard(currentCard)
+				updateTrickDisplay(trick)
+
+				// Process AI turns
+				for i := 1; i < 4; i++ {
+					turn := (2 + i) % 4 // Rotate through positions
+					ai := round.Players[turn]
+					if ai.ComputerPlayer {
+						var partialTrick []*Card
+						for _, t := range trick {
+							if t != nil {
+								partialTrick = append(partialTrick, t)
+							}
+						}
+						play := ai.BestPlay(partialTrick, *round)
+						trick[turn] = ai.PlayCard(&play)
+						updateTrickDisplay(trick)
+					}
+				}
+
+				// Determine winner
+				winner := resolveTrick(trick, round)
+				round.Lead = winner
+
+				time.Sleep(time.Second)
+				for i := range trick {
+					trick[i] = nil
+				}
+				updateTrickDisplay(trick)
+				updateHumanHand() 
+			}),
+		)
+		handBox.Add(cardUI)
+	}
+}
+
+
+	// Function to refresh the entire game UI
+	// Function to refresh the entire game UI
+refreshGameUI := func() {
+    // Refresh kitty - update the existing container
+    kitty := createStackedKitty(round, fyne.NewSize(70, 110))
+    kittyContainer.Objects = []fyne.CanvasObject{kitty}
+
+    // Clear trick display
+    updateTrickDisplay(make([]*Card, 4))
+
+    // Update scores
+    north.Objects[0].(*fyne.Container).Objects[1].(*widget.Label).SetText(fmt.Sprintf("Score: %d", players[0].Score))
+    east.Objects[0].(*fyne.Container).Objects[1].(*widget.Label).SetText(fmt.Sprintf("Score: %d", players[1].Score))
+    south.Objects[0].(*fyne.Container).Objects[1].(*widget.Label).SetText(fmt.Sprintf("Score: %d", players[2].Score))
+    west.Objects[0].(*fyne.Container).Objects[1].(*widget.Label).SetText(fmt.Sprintf("Score: %d", players[3].Score))
+
+    // Refresh human hand
+    updateHumanHand()
+}
+
+	// New Game button
+	newGameBtn := widget.NewButton("New Game", func() {
+		game.NewGame(false)
+		round = game.Rounds[len(game.Rounds)-1]
+		refreshGameUI()
+	})
+
+	// Bottom area
+	bottomArea := container.NewVBox(
+		south,
+		handBox,
+		container.NewCenter(newGameBtn),
+	)
+
+	// Main content
+	mainContent := container.NewBorder(
+		container.NewCenter(north),  // Top
+		bottomArea,                  // Bottom
+		container.NewCenter(west),   // Left
+		container.NewCenter(east),   // Right
+		centerArea,                 // Center
+	)
+
+	// Initial UI setup
+	refreshGameUI()
+
+	myWindow.SetContent(mainContent)
+	myWindow.Resize(fyne.NewSize(800, 600))
+	myWindow.ShowAndRun()
+}
+
+
 func updateTrickDisplay(trick []*Card, trickBoxes [4]*fyne.Container, cardSize fyne.Size) {
 	for i := 0; i < 4; i++ {
 		trickBoxes[i].Objects = nil
@@ -101,143 +306,72 @@ func updateKittyPosition(dealerIndex int, kitty *fyne.Container) {
 	}
 }
 
-func updateHumanHand(player *Player, trick []*Card, handBox *fyne.Container,
-	trickBoxes [4]*fyne.Container, round *Round, window fyne.Window) {
 
-	handBox.Objects = nil
-	cardSize := fyne.NewSize(80, 120)
-
-	for _, card := range player.CardMap.ToSlice() {
-		currentCard := card
-		cardUI := container.NewVBox(
-			renderCardImage(currentCard, cardSize),
-			widget.NewButton("Play", func() {
-				trick[round.Lead] = player.PlayCard(currentCard)
-				updateTrickDisplay(trick, trickBoxes, cardSize)
-
-				// Process AI turns
-				for i := 1; i < 4; i++ {
-					turn := (round.Lead + i) % 4
-					ai := round.Players[turn]
-					if ai.ComputerPlayer {
-						var partialTrick []*Card
-						for _, t := range trick {
-							if t != nil {
-								partialTrick = append(partialTrick, t)
-							}
-						}
-						play := ai.BestPlay(partialTrick, *round)
-						trick[turn] = ai.PlayCard(&play)
-						updateTrickDisplay(trick, trickBoxes, cardSize)
-					}
-				}
-
-				winner := resolveTrick(trick, round)
-				round.Lead = winner
-
-				time.Sleep(time.Second)
-				for i := range trick {
-					trick[i] = nil
-				}
-				updateTrickDisplay(trick, trickBoxes, cardSize)
-				updateHumanHand(player, trick, handBox, trickBoxes, round, window)
-			}),
-		)
-		handBox.Add(cardUI)
-	}
+func updateGameUI(round *Round, window fyne.Window) {
+    // Rebuild the main game UI based on current game state
+    if round.SelectingTrump {
+        updateUIForTrumpSelection(round, window)
+    } else {
+        // Show normal game UI
+        // ... (your existing game UI code)
+    }
 }
 
-func main() {
-	myApp := app.New()
-	myWindow := myApp.NewWindow("Euchre")
-	myWindow.SetPadded(true)
 
-	// Initialize players
-	players := []*Player{
-		{Name: "North", ComputerPlayer: true},
-		{Name: "East", ComputerPlayer: true},
-		{Name: "South"},
-		{Name: "West", ComputerPlayer: true},
-	}
+func updateUIForTrumpSelection(round *Round, window fyne.Window) {
+    if !round.SelectingTrump || round.ActivePlayer != 2 { // Assuming human is always position 2
+        return
+    }
 
-	// Create game and initial round
-	game := CreateEuchreGame(players)
-	game.NewGame(false)
-	round := game.Rounds[len(game.Rounds)-1]
-
-	// UI elements
-	trick := make([]*Card, 4)
-	handBox := container.NewHBox()
-	trickBoxes := [4]*fyne.Container{
-		container.NewHBox(), container.NewHBox(),
-		container.NewHBox(), container.NewHBox(),
-	}
-
-	// Create stacked kitty
-	kitty := createStackedKitty(round, fyne.NewSize(70, 110))
-	updateKittyPosition(round.Dealer, kitty)
-
-	// Player areas
-	north := container.NewVBox(
-		trickBoxes[0],
-		container.NewHBox(
-			widget.NewLabel("North"), 
-			widget.NewLabel(fmt.Sprintf("Score: %d", players[0].Score)),
-		),
-	)
-
-	south := container.NewVBox(
-		trickBoxes[2],
-		container.NewHBox(
-			widget.NewLabel("South"), 
-			widget.NewLabel(fmt.Sprintf("Score: %d", players[2].Score)),
-		),
-	)
-
-	east := container.NewVBox(
-		widget.NewLabel("East"),
-		widget.NewLabel(fmt.Sprintf("Score: %d", players[1].Score)),
-		trickBoxes[1],
-	)
-
-	west := container.NewVBox(
-		widget.NewLabel("West"),
-		widget.NewLabel(fmt.Sprintf("Score: %d", players[3].Score)),
-		trickBoxes[3],
-	)
-
-	// New Game button
-	newGameBtn := widget.NewButton("New Game", func() {
-		game.NewGame(false)
-		round = game.Rounds[len(game.Rounds)-1]
-		updateKittyPosition(round.Dealer, kitty)
-		handBox.Objects = nil
-		for i := range trickBoxes {
-			trickBoxes[i].Objects = nil
-		}
-		updateHumanHand(players[2], trick, handBox, trickBoxes, round, myWindow)
-	})
-
-	// Bottom area with hand and New Game button
-	bottomArea := container.NewVBox(
-		south,
-		handBox,
-		container.NewCenter(newGameBtn),
-	)
-
-	// Main layout
-	content := container.NewBorder(
-		container.NewCenter(north), // Top
-		bottomArea,                // Bottom (now includes New Game button)
-		container.NewCenter(west), // Left
-		container.NewCenter(east), // Right
-		kitty,                    // Center
-	)
-
-	// Initial hand update
-	updateHumanHand(players[2], trick, handBox, trickBoxes, round, myWindow)
-
-	myWindow.SetContent(content)
-	myWindow.Resize(fyne.NewSize(800, 600))
-	myWindow.ShowAndRun()
+    // Check if we're in first round (top card face up) or second round
+    firstRound := len(round.Deck.Cards) > 0 && round.Deck.Cards[0].FaceUp
+    
+    var content *fyne.Container
+    if firstRound {
+        topCard := round.Deck.Cards[0]
+        content = container.NewVBox(
+            widget.NewLabel(fmt.Sprintf("Top card is %s of %s", topCard.FriendlyRank(), topCard.Suit.FriendlySuit())),
+            widget.NewLabel("Do you want to:"),
+            widget.NewButton("Order Up", func() {
+                round.HumanTrumpSelection(OrderUp, topCard.Suit)
+                updateGameUI(round, window)
+            }),
+            widget.NewButton("Go Alone", func() {
+                round.HumanTrumpSelection(Alone, topCard.Suit)
+                updateGameUI(round, window)
+            }),
+            widget.NewButton("Pass", func() {
+                round.HumanTrumpSelection(Pass, topCard.Suit)
+                updateGameUI(round, window)
+            }),
+        )
+    } else {
+        // Second round - choose any suit except the turned-down one
+        passedSuit := Suit(-1)
+        if len(round.Deck.Cards) > 0 {
+            passedSuit = round.Deck.Cards[0].Suit
+        }
+        
+        suitButtons := container.NewHBox()
+        for _, suit := range []Suit{Spades, Diamonds, Clubs, Hearts} {
+            if suit != passedSuit {
+                currentSuit := suit
+                suitButtons.Add(widget.NewButton(suit.FriendlySuit(), func() {
+                    round.HumanTrumpSelection(OrderUp, currentSuit)
+                    updateGameUI(round, window)
+                }))
+            }
+        }
+        
+        content = container.NewVBox(
+            widget.NewLabel("Choose a trump suit:"),
+            suitButtons,
+            widget.NewButton("Pass", func() {
+                round.HumanTrumpSelection(Pass, Suit(-1))
+                updateGameUI(round, window)
+            }),
+        )
+    }
+    
+    window.SetContent(content)
 }
