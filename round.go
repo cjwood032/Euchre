@@ -134,7 +134,29 @@ func (round *Round) HumanTrumpSelection(call Call, trump Suit) {
 		// Continue to next player
 		round.DetermineTrump()
 	} else {
-		round.BeginPlay(call, trump)
+		round.Trump = trump
+		round.Caller = player
+		if call == Alone {
+			round.Alone = true
+		}
+
+		// If this is first round and card is face up, dealer picks it up
+		if len(round.Deck.Cards) > 0 && round.Deck.Cards[0].FaceUp {
+			if round.ActivePlayer == round.Dealer {
+				// Dealer is ordering - pick up card and discard one
+				pickedCard := round.Deck.Cards[0]
+				player.PickUp(pickedCard)
+
+				// Show discard UI (handled in gameUI)
+				round.SelectingTrump = false
+				return
+			} else {
+				// Non-dealer ordering - dealer picks up card
+				round.Players[round.Dealer].PickUp(round.Deck.Cards[0])
+			}
+			round.Deck.Cards = round.Deck.Cards[1:] // Remove from kitty
+		}
+
 		round.SelectingTrump = false
 	}
 }
@@ -147,6 +169,21 @@ func (r *Round) ComputerTrumpSelection(decision Call, suit Suit) {
 		if decision == Alone {
 			r.Alone = true
 		}
+
+		// If this is first round and card is face up
+		if len(r.Deck.Cards) > 0 && r.Deck.Cards[0].FaceUp {
+			if r.ActivePlayer == r.Dealer {
+				// Dealer is ordering - pick up card and discard one
+				pickedCard := r.Deck.Cards[0]
+				r.Players[r.Dealer].PickUp(pickedCard)
+				r.ComputerDealerDiscard()
+			} else {
+				// Non-dealer ordering - dealer picks up card
+				r.Players[r.Dealer].PickUp(r.Deck.Cards[0])
+			}
+			r.Deck.Cards = r.Deck.Cards[1:] // Remove from kitty
+		}
+
 		r.SelectingTrump = false
 	case Pass:
 		r.ActivePlayer = (r.ActivePlayer + 1) % 4
@@ -157,10 +194,39 @@ func (r *Round) ComputerTrumpSelection(decision Call, suit Suit) {
 				r.ActivePlayer = (r.Dealer + 1) % 4
 			} else {
 				// Second round passed - redeal
-				r.SelectingTrump = false
-				// TODO: Handle redeal
+				r.SelectingTrump = false // ... existing pass logic ...
 			}
 		}
+	}
+}
+
+func (round *Round) ComputerDealerDiscard() {
+	dealer := round.Players[round.Dealer]
+	if len(dealer.CardMap.ToSlice()) <= 5 {
+		return // No need to discard
+	}
+
+	// Simple AI - discard weakest non-trump card
+	var discard *Card
+	for _, card := range dealer.CardMap.ToSlice() {
+		if card.Suit != round.Trump {
+			if discard == nil || card.Rank < discard.Rank {
+				discard = card
+			}
+		}
+	}
+
+	// If all cards are trump, discard lowest trump
+	if discard == nil {
+		for _, card := range dealer.CardMap.ToSlice() {
+			if discard == nil || card.Rank < discard.Rank {
+				discard = card
+			}
+		}
+	}
+
+	if discard != nil {
+		dealer.CardMap.RemoveFromHand(*discard)
 	}
 }
 
@@ -169,12 +235,18 @@ func (round *Round) BeginPlay(call Call, trump Suit) {
 	round.Caller = round.Players[round.ActivePlayer]
 	round.Alone = (call == Alone)
 
+	// Hide the kitty by removing the face-up card if it exists
 	if len(round.Deck.Cards) > 0 && round.Deck.Cards[0].FaceUp {
-		round.Players[round.Dealer].PickUp(round.Deck.Cards[0])
+		if round.ActivePlayer == round.Dealer {
+			// Dealer picks up the card
+			round.Players[round.Dealer].PickUp(round.Deck.Cards[0])
+		}
+		round.Deck.Cards = round.Deck.Cards[1:] // Remove from kitty
 	}
 
 	// Set the first player to left of dealer
-	round.ActivePlayer = (round.Dealer + 1) % len(round.Players)
+	round.Lead = (round.Dealer + 1) % len(round.Players)
+	round.ActivePlayer = round.Lead
 	round.SelectingTrump = false
 }
 

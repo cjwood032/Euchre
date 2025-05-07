@@ -178,9 +178,15 @@ func renderCardBack(size fyne.Size) *canvas.Image {
 }
 
 func createStackedKitty(round *Round, size fyne.Size) *fyne.Container {
+	// Don't show kitty if trump has been selected
+	if !round.SelectingTrump && len(round.Deck.Cards) > 0 && round.Deck.Cards[0].FaceUp {
+		return container.NewPadded() // Empty container
+	}
+
 	stack := container.NewWithoutLayout()
 	offset := float32(8)
 
+	// Always show 3 face-down cards
 	for i := 0; i < 3; i++ {
 		back := renderCardBack(size)
 		back.Resize(size)
@@ -188,11 +194,18 @@ func createStackedKitty(round *Round, size fyne.Size) *fyne.Container {
 		stack.Add(back)
 	}
 
+	// Show top card only if it exists and is face up
 	if len(round.Deck.Cards) > 0 && round.Deck.Cards[0].FaceUp {
 		topCard := renderCardImage(round.Deck.Cards[0], size)
 		topCard.Resize(size)
 		topCard.Move(fyne.NewPos(0, float32(3)*offset))
 		stack.Add(topCard)
+	} else if len(round.Deck.Cards) > 0 {
+		// Show face-down card if exists
+		back := renderCardBack(size)
+		back.Resize(size)
+		back.Move(fyne.NewPos(0, float32(3)*offset))
+		stack.Add(back)
 	}
 
 	return container.NewPadded(stack)
