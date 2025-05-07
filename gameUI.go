@@ -36,10 +36,14 @@ type GameUI struct {
 	EastDealerIndicator  *widget.Label
 	SouthDealerIndicator *widget.Label
 	WestDealerIndicator  *widget.Label
+	discardDialog        *widget.PopUp
 }
 
 func (ui *GameUI) RefreshUI() {
 	// Update all static elements
+	if ui.discardDialog != nil {
+		ui.discardDialog.Hide()
+	}
 	ui.updateDealerIndicators()
 	ui.updateTrickDisplay(make([]*Card, 4))
 
@@ -56,19 +60,26 @@ func (ui *GameUI) RefreshUI() {
 	// Always update hand (maintains single instance)
 	ui.updateHumanHand()
 
+	ui.updateDealerIndicators()
+	ui.updateTrickDisplay(make([]*Card, 4))
+	ui.updateHumanHand()
+
 	if ui.Round.SelectingTrump {
-		if ui.Round.ActivePlayer == 2 { // Human player
-			// Only show buttons if it's still their turn
-			if ui.Round.Players[ui.Round.ActivePlayer] == ui.Players[2] {
-				ui.showTrumpSelection()
-			} else {
-				ui.Window.SetContent(ui.MainContent)
-			}
+		if ui.Round.ActivePlayer == 2 { // Human's turn to order
+			ui.showTrumpSelection()
 		} else {
-			go ui.processComputerTrumpSelection()
+			// Computer decides automatically
+			ui.processComputerTrumpSelection()
 		}
 	} else {
+		// Card play phase
 		ui.Window.SetContent(ui.MainContent)
+		if ui.Round.ActivePlayer == 2 {
+			// Human's turn to play card
+		} else {
+			// Computer plays automatically
+			ui.playComputerTurn()
+		}
 	}
 }
 
@@ -118,7 +129,7 @@ func (ui *GameUI) showTrumpSelection() {
 	firstRound := len(ui.Round.Deck.Cards) > 0 && ui.Round.Deck.Cards[0].FaceUp
 
 	// Create a container for the trump selection UI
-	trumpSelectionContainer := container.NewVBox()
+	trumpSelectionContainer := container.NewHBox()
 
 	if firstRound {
 		topCard := ui.Round.Deck.Cards[0]
@@ -127,28 +138,24 @@ func (ui *GameUI) showTrumpSelection() {
 
 		orderUpBtn := widget.NewButton("Order Up", func() {
 			ui.Round.HumanTrumpSelection(OrderUp, topCard.Suit)
+			if ui.Round.Dealer == 2 { // Human is dealer
+				ui.showDiscardSelection()
+			}
 			ui.RefreshUI()
 		})
 		orderUpBtn.Importance = widget.HighImportance
 
 		goAloneBtn := widget.NewButton("Go Alone", func() {
 			ui.Round.HumanTrumpSelection(Alone, topCard.Suit)
+			if ui.Round.Dealer == 2 { // Human is dealer
+				ui.showDiscardSelection()
+			}
 			ui.RefreshUI()
 		})
 
 		passBtn := widget.NewButton("Pass", func() {
 			ui.Round.HumanTrumpSelection(Pass, topCard.Suit)
-			ui.Window.SetContent(ui.MainContent)
-
-			// Process the pass
-			if firstRound {
-				ui.Round.HumanTrumpSelection(Pass, topCard.Suit)
-			} else {
-				ui.Round.HumanTrumpSelection(Pass, Suit(-1))
-			}
-
-			// Refresh to show updated state
-			ui.RefreshUI()
+			ui.processComputerTrumpSelection() // Continue with next players
 		})
 
 		trumpSelectionContainer.Add(orderUpBtn)
@@ -178,7 +185,7 @@ func (ui *GameUI) showTrumpSelection() {
 
 		passBtn := widget.NewButton("Pass", func() {
 			ui.Round.HumanTrumpSelection(Pass, Suit(-1))
-			ui.RefreshUI()
+			ui.processComputerTrumpSelection() // Continue with next players
 		})
 		trumpSelectionContainer.Add(passBtn)
 	}
@@ -269,6 +276,53 @@ func (ui *GameUI) showComputerDecision(player *Player, decision string, suit Sui
 }
 
 func (ui *GameUI) processComputerTrumpSelection() {
+	if !ui.Round.SelectingTrump || ui.Round.ActivePlayer == 2 { // Human player's position
+		return
+	}
+
+	currentPlayer := ui.Round.Players[ui.Round.ActivePlayer]
+	if !currentPlayer.ComputerPlayer {
+		return
+	}
+
+	var decision Call
+	var suit Suit
+
+	if len(ui.Round.Deck.Cards) > 0 && ui.Round.Deck.Cards[0].FaceUp {
+		// First round decision
+		suit = ui.Round.Deck.Cards[0].Suit
+		decision = currentPlayer.CallOrPass(suit, ui.Round.Dealer%2 == ui.Round.ActivePlayer%2)
+	} else {
+		// Second round decision
+		passedSuit := Suit(-1)
+		if len(ui.Round.Deck.Cards) > 0 {
+			passedSuit = ui.Round.Deck.Cards[0].Suit
+		}
+		decision, suit = currentPlayer.DeclareTrump(passedSuit)
+	}
+
+	// Show the computer's decision
+	ui.showComputerDecision(currentPlayer, decision.FriendlyCall(), suit)
+
+	// Process the decision
+	if decision == Pass {
+		ui.Round.ComputerTrumpSelection(decision, suit)
+		// If it's now human's turn, show the selection UI
+		if ui.Round.SelectingTrump && ui.Round.ActivePlayer == 2 {
+			ui.showTrumpSelection()
+			return
+		}
+		// Continue processing if there are more computer players
+		if ui.Round.SelectingTrump && ui.Round.ActivePlayer != 2 {
+			time.AfterFunc(500*time.Millisecond, ui.processComputerTrumpSelection)
+		}
+	} else {
+		ui.Round.ComputerTrumpSelection(decision, suit)
+		ui.RefreshUI()
+	}
+}
+
+/*func (ui *GameUI) processComputerTrumpSelection() {
 	for ui.Round.SelectingTrump {
 		currentPlayer := ui.Round.Players[ui.Round.ActivePlayer]
 		if ui.Round.ActivePlayer == 2 { // Human player's position
@@ -276,13 +330,13 @@ func (ui *GameUI) processComputerTrumpSelection() {
 			return
 		}
 		if currentPlayer.ComputerPlayer {
-			var decision string
+			var decision Call
 			var suit Suit
 
 			if len(ui.Round.Deck.Cards) > 0 && ui.Round.Deck.Cards[0].FaceUp {
 				// First round decision
 				suit = ui.Round.Deck.Cards[0].Suit
-				decision = currentPlayer.CallOrPass(suit, ui.Round.Dealer%2 == ui.Round.ActivePlayer%2).FriendlyCall()
+				decision = currentPlayer.CallOrPass(suit, ui.Round.Dealer%2 == ui.Round.ActivePlayer%2)
 			} else {
 				// Second round decision
 				passedSuit := Suit(-1)
@@ -290,12 +344,29 @@ func (ui *GameUI) processComputerTrumpSelection() {
 					passedSuit = ui.Round.Deck.Cards[0].Suit
 				}
 				call, selectedSuit := currentPlayer.DeclareTrump(passedSuit)
-				decision = call.FriendlyCall()
+				decision = call
 				suit = selectedSuit
 			}
+			if decision == OrderUp || decision == Alone {
+				// If computer ordered and human is dealer
+				if ui.Round.Dealer == 2 && len(ui.Round.Deck.Cards) > 0 && ui.Round.Deck.Cards[0].FaceUp {
+					// Human needs to pick up and discard
+					ui.Round.Players[2].PickUp(ui.Round.Deck.Cards[0])
+					ui.Round.Deck.Cards = ui.Round.Deck.Cards[1:]
+					ui.showDiscardSelection()
+					return // Stop computer processing to wait for human
+				} else if ui.Round.ActivePlayer == ui.Round.Dealer {
+					// Computer dealer auto-discards
+					pickedCard := ui.Round.Deck.Cards[0]
+					currentPlayer.PickUp(pickedCard)
+					// ... auto-discard logic ...
+				}
+				ui.Round.BeginPlay(decision, suit)
+			}
 
+			ui.Window.SetContent(ui.MainContent)
 			// Show the computer's decision
-			ui.showComputerDecision(currentPlayer, decision, suit)
+			ui.showComputerDecision(currentPlayer, decision.FriendlyCall(), suit)
 
 			// Process the decision
 			if len(ui.Round.Deck.Cards) > 0 && ui.Round.Deck.Cards[0].FaceUp {
@@ -316,7 +387,7 @@ func (ui *GameUI) processComputerTrumpSelection() {
 			break // Human player's turn
 		}
 	}
-}
+}*/
 
 func (ui *GameUI) showCardPickup() {
 	if len(ui.Round.Deck.Cards) == 0 {
@@ -505,4 +576,49 @@ func (ui *GameUI) clearTrumpSelection() {
 	// Reset to main content immediately
 	ui.Window.SetContent(ui.MainContent)
 	ui.RefreshUI()
+}
+func (ui *GameUI) showDiscardSelection() {
+	if ui.Round.Dealer != 2 || len(ui.Players[2].CardMap.ToSlice()) <= 5 {
+		return // Not human dealer or no card to discard
+	}
+
+	player := ui.Players[2]
+	cardSize := fyne.NewSize(80, 120)
+
+	// Create the discard selection content
+	content := container.NewVBox(
+		widget.NewLabelWithStyle("Select a card to discard:", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+	)
+
+	handContainer := container.NewHBox()
+	content.Add(handContainer)
+
+	for _, card := range player.CardMap.ToSlice() {
+		currentCard := card
+		cardUI := container.NewVBox(
+			renderCardImage(currentCard, cardSize),
+			widget.NewButton("Discard", func() {
+				player.CardMap.RemoveFromHand(*currentCard)
+				ui.discardDialog.Hide()
+				ui.RefreshUI() // Return to normal play
+			}),
+		)
+		handContainer.Add(cardUI)
+	}
+
+	// Add cancel button
+	content.Add(widget.NewButton("Cancel", func() {
+		ui.discardDialog.Hide()
+		ui.RefreshUI()
+	}))
+
+	// Create and show the modal dialog
+	ui.discardDialog = widget.NewModalPopUp(
+		container.NewBorder(
+			nil, nil, nil, nil,
+			content,
+		),
+		ui.Window.Canvas(),
+	)
+	ui.discardDialog.Show()
 }

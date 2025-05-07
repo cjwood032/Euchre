@@ -53,7 +53,12 @@ func (player *Player) DeclareTrump(unavailableSuit Suit) (Call, Suit) {
 }
 
 func (player *Player) PickUp(card *Card) {
-	player.chooseDiscard(card)
+	if player.ComputerPlayer {
+		player.chooseDiscard(card)
+	} else {
+		player.CardMap.AddToHand(card)
+	}
+
 }
 
 func (player *Player) InitCardMap() {
