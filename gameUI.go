@@ -38,6 +38,7 @@ type GameUI struct {
 	SouthDealerIndicator *widget.Label
 	WestDealerIndicator  *widget.Label
 	discardDialog        *widget.PopUp
+	CallerIndicator      *widget.Label
 }
 
 func (ui *GameUI) RefreshUI() {
@@ -46,6 +47,7 @@ func (ui *GameUI) RefreshUI() {
 		ui.discardDialog.Hide()
 	}
 	ui.updateDealerIndicators()
+	ui.updateCallerIndicator()
 	ui.updateTrickDisplay([4]*Card(make([]*Card, 4)))
 
 	// Refresh kitty
@@ -147,7 +149,7 @@ func (ui *GameUI) showTrumpSelection() {
 
 	// First update the hand (without play buttons)
 	ui.updateHumanHand()
-
+	ui.updateCallerIndicator()
 	firstRound := len(ui.Round.Deck.Cards) > 0 && ui.Round.Deck.Cards[0].FaceUp
 
 	// Create a container for the trump selection UI
@@ -642,4 +644,22 @@ func (ui *GameUI) clearTrickDisplay() {
 
 	// Force full UI update
 	ui.Window.Content().Refresh()
+}
+
+func (ui *GameUI) updateCallerIndicator() {
+	if ui.Round.Caller == nil || ui.Round.Trump == Suit(-1) {
+		ui.CallerIndicator.SetText("")
+		return
+	}
+
+	text := fmt.Sprintf("%s called %s",
+		ui.Round.Caller.Name,
+		ui.Round.Trump.FriendlySuit())
+
+	if ui.Round.Alone {
+		text += " (Alone!)"
+	}
+
+	ui.CallerIndicator.SetText(text)
+	ui.CallerIndicator.Refresh()
 }

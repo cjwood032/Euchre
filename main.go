@@ -38,6 +38,13 @@ func main() {
 		Trick:   [4]*Card(make([]*Card, 4)),
 		HandBox: container.NewHBox(),
 	}
+	callerIndicator := widget.NewLabel("")
+	callerIndicator.Alignment = fyne.TextAlignCenter
+	callerIndicator.TextStyle = fyne.TextStyle{Bold: true}
+
+	ui.CallerIndicator = callerIndicator
+
+	// Add it to your layout (modify your container as needed)
 
 	// Initialize center positions
 	ui.CenterNorth = container.NewCenter()
@@ -94,21 +101,25 @@ func main() {
 		widget.NewLabel("NORTH"),
 		ui.createDealerIndicator(0),
 		ui.NorthScore,
+		callerIndicator,
 	)
 	east := container.NewHBox(
 		widget.NewLabel("EAST"),
 		ui.createDealerIndicator(1),
 		ui.EastScore,
+		callerIndicator,
 	)
 	south := container.NewHBox(
 		widget.NewLabel("SOUTH"),
 		ui.createDealerIndicator(2),
 		ui.SouthScore,
+		callerIndicator,
 	)
 	west := container.NewHBox(
 		widget.NewLabel("WEST"),
 		ui.createDealerIndicator(3),
 		ui.WestScore,
+		callerIndicator,
 	)
 	// Store references in the UI struct
 	ui.NewGameBtn = newGameBtn
@@ -127,10 +138,12 @@ func main() {
 		container.NewVBox( // Top section
 			controls, // New Game button at very top
 			container.NewCenter(north),
+			//callerIndicator,
 		),
 		container.NewVBox( // Bottom section
 			container.NewCenter(south),
-			ui.HandBox, // Centered hand (only one instance)
+			ui.HandBox,
+			//callerIndicator, // Centered hand (only one instance)
 		),
 		container.NewCenter(west), // Left
 		container.NewCenter(east), // Right
