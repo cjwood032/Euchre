@@ -140,6 +140,7 @@ func (round *Round) HumanTrumpSelection(call Call, trump Suit) {
 				round.SelectingTrump = false // ... existing pass logic ...
 			}
 		}
+		round.ActivePlayer = (round.ActivePlayer + 1) % 4
 	} else {
 		round.Trump = trump
 		round.Caller = player
@@ -163,7 +164,7 @@ func (round *Round) HumanTrumpSelection(call Call, trump Suit) {
 		round.SelectingTrump = false
 		round.BeginPlay(call, trump) // This will hide the kitty
 	}
-	round.ActivePlayer = (round.ActivePlayer + 1) % 4
+
 }
 
 func (r *Round) ComputerTrumpSelection(decision Call, suit Suit) {
@@ -171,40 +172,28 @@ func (r *Round) ComputerTrumpSelection(decision Call, suit Suit) {
 	case OrderUp, Alone:
 		r.Trump = suit
 		r.Caller = r.Players[r.ActivePlayer]
+		r.Alone = (decision == Alone)
 		r.SelectingTrump = false
-		if decision == Alone {
-			r.Alone = true
-		}
 
-		// If this is first round and card is face up
 		if len(r.Deck.Cards) > 0 && r.Deck.Cards[0].FaceUp {
+			// Only dealer picks up the card
 			if r.ActivePlayer == r.Dealer {
-				// Dealer is ordering - pick up card and discard one
 				pickedCard := r.Deck.Cards[0]
 				r.Players[r.Dealer].PickUp(pickedCard)
 				r.ComputerDealerDiscard()
-			} else {
-				// Non-dealer ordering - dealer picks up card
-				r.Players[r.Dealer].PickUp(r.Deck.Cards[0])
 			}
-			r.Deck.Cards = r.Deck.Cards[1:] // Remove from kitty
+			r.Deck.Cards = r.Deck.Cards[1:]
 		}
 
-		r.SelectingTrump = false
-	case Pass:
-		// Move to next player
-		r.ActivePlayer = (r.ActivePlayer + 1) % 4
+		r.BeginPlay(decision, suit)
 
-		// Check if all players have passed
+	case Pass:
+		r.ActivePlayer = (r.ActivePlayer + 1) % 4
 		if r.ActivePlayer == r.Dealer {
 			if len(r.Deck.Cards) > 0 && r.Deck.Cards[0].FaceUp {
-				// First round passed - flip card and go to second round
 				r.Deck.Cards[0].FaceUp = false
-				r.ActivePlayer = (r.Dealer + 1) % 4 // Reset to left of dealer
 			} else {
-				// Second round passed - redeal
 				r.SelectingTrump = false
-				// You might want to handle redeal here
 			}
 		}
 	}
@@ -245,7 +234,16 @@ func (round *Round) BeginPlay(call Call, trump Suit) {
 	round.Lead = (round.Dealer + 1) % len(round.Players) // Left of dealer leads first trick
 	round.ActivePlayer = round.Lead
 	round.Trump = trump
-	round.Alone = (call == Alone)
+	for _, p := range round.Players {
+		p.IsPlaying = true
+	}
+
+	// Handle "going alone"
+	if call == Alone {
+		partnerPos := (round.Caller.Position + 2) % 4
+		round.Players[partnerPos].IsPlaying = false
+	}
+
 	if len(round.Deck.Cards) > 0 {
 		round.Deck.Cards[0].TurnFaceDown()
 	}

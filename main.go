@@ -18,10 +18,10 @@ func main() {
 	handBox := container.NewHBox()
 	// Initialize players
 	players := []*Player{
-		{Name: "NORTH", ComputerPlayer: true},
-		{Name: "EAST", ComputerPlayer: true},
-		{Name: "SOUTH"},
-		{Name: "WEST", ComputerPlayer: true},
+		{Name: "NORTH", ComputerPlayer: true, Position: 0, IsPlaying: true},
+		{Name: "EAST", ComputerPlayer: true, Position: 1, IsPlaying: true},
+		{Name: "SOUTH", Position: 2, IsPlaying: true},
+		{Name: "WEST", ComputerPlayer: true, Position: 3, IsPlaying: true},
 	}
 
 	// Create game and initial round
@@ -35,7 +35,7 @@ func main() {
 		Players: players,
 		Round:   currentRound,
 		Game:    game,
-		Trick:   make([]*Card, 4),
+		Trick:   [4]*Card(make([]*Card, 4)),
 		HandBox: container.NewHBox(),
 	}
 
@@ -75,7 +75,7 @@ func main() {
 	newGameBtn := widget.NewButton("New Game", func() {
 		ui.Game.NewGame(false)
 		ui.Round = ui.Game.Rounds[len(ui.Game.Rounds)-1]
-		ui.Trick = make([]*Card, 4)
+		ui.Trick = [4]*Card(make([]*Card, 4))
 
 		// Complete UI reset
 		ui.HandBox.Objects = []fyne.CanvasObject{container.NewHBox()}
@@ -146,26 +146,23 @@ func main() {
 }
 
 func resolveTrick(trick []*Card, round *Round) int {
-	if len(trick) == 0 || trick[0] == nil {
-		return 0
-	}
-
-	lead := round.Lead
-	winningIndex := lead
-	trump := round.Trump
-	leadSuit := trick[0].Suit
+	winningIndex := round.Lead
+	winningCard := trick[winningIndex]
+	leadSuit := trick[round.Lead].Suit
 
 	for i := 1; i < 4; i++ {
-		pos := (lead + i) % 4
-		if pos < len(trick) && trick[pos] != nil &&
-			trick[pos].Beats(trick[winningIndex], leadSuit, trump) {
+		pos := (round.Lead + i) % 4
+		if trick[pos].Beats(winningCard, leadSuit, round.Trump) {
 			winningIndex = pos
+			winningCard = trick[pos]
 		}
 	}
 
-	if winningIndex < len(round.Players) {
+	// Update tricks won for active players only
+	if round.Players[winningIndex].IsPlaying {
 		round.Players[winningIndex].TricksWon++
 	}
+
 	return winningIndex
 }
 

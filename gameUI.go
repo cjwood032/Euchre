@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"runtime"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -28,7 +29,7 @@ type GameUI struct {
 	SouthScore     *widget.Label
 	WestScore      *widget.Label
 
-	Trick                []*Card
+	Trick                [4]*Card
 	NewGameBtn           *widget.Button
 	SouthHandBox         *fyne.Container
 	BottomArea           *fyne.Container
@@ -45,7 +46,7 @@ func (ui *GameUI) RefreshUI() {
 		ui.discardDialog.Hide()
 	}
 	ui.updateDealerIndicators()
-	ui.updateTrickDisplay(make([]*Card, 4))
+	ui.updateTrickDisplay([4]*Card(make([]*Card, 4)))
 
 	// Refresh kitty
 	kitty := createStackedKitty(ui.Round, fyne.NewSize(70, 110))
@@ -61,7 +62,7 @@ func (ui *GameUI) RefreshUI() {
 	ui.updateHumanHand()
 
 	ui.updateDealerIndicators()
-	ui.updateTrickDisplay(make([]*Card, 4))
+	ui.updateTrickDisplay([4]*Card(make([]*Card, 4)))
 	ui.updateHumanHand()
 
 	if ui.Round.SelectingTrump {
@@ -108,13 +109,34 @@ func (ui *GameUI) updateHumanHand() {
 
 		if showPlayButtons {
 			playBtn := widget.NewButton("Play", func() {
-				// ... existing play logic ...
+				// Play card
+				playedCard := ui.Players[2].PlayCard(currentCard)
+				ui.Trick[2] = playedCard
+				ui.updateTrickDisplay(ui.Trick)
+
+				// If trick is complete
+				if ui.isTrickComplete() {
+					winner := resolveTrick(ui.Trick[:], ui.Round)
+					ui.Round.Lead = winner
+					ui.Round.ActivePlayer = winner
+
+					time.Sleep(1 * time.Second)
+					ui.clearTrickDisplay()
+					ui.Trick = [4]*Card{}
+				}
+				// Move to next player
+				ui.Round.ActivePlayer = (ui.Round.ActivePlayer + 1) % 4
+				ui.updateHumanHand()
+
+				// Process computer turns if needed
+				if ui.Round.ActivePlayer != 2 {
+					ui.playComputerTurn()
+				}
 			})
 			cardUI.Add(playBtn)
 		}
 		handContainer.Add(cardUI)
 	}
-
 	ui.HandBox.Refresh()
 }
 
@@ -204,32 +226,28 @@ func (ui *GameUI) showTrumpSelection() {
 	ui.Window.SetContent(content)
 }
 
-func (ui *GameUI) updateTrickDisplay(trick []*Card) {
-	// Clear only if we're passing an empty trick
-	if len(trick) == 0 {
-		ui.CenterNorth.Objects = nil
-		ui.CenterEast.Objects = nil
-		ui.CenterSouth.Objects = nil
-		ui.CenterWest.Objects = nil
-		return
-	}
+func (ui *GameUI) updateTrickDisplay(trick [4]*Card) {
+	// Clear previous cards first
+	ui.clearTrickDisplay()
 
-	// Otherwise, update each position with current card
 	cardSize := fyne.NewSize(80, 120)
+
+	// Update each position with current card
 	for i, card := range trick {
 		if card == nil {
 			continue
 		}
 
+		img := renderCardImage(card, cardSize)
 		switch i {
-		case 0: // North
-			ui.CenterNorth.Objects = []fyne.CanvasObject{renderCardImage(card, cardSize)}
-		case 1: // East
-			ui.CenterEast.Objects = []fyne.CanvasObject{renderCardImage(card, cardSize)}
-		case 2: // South
-			ui.CenterSouth.Objects = []fyne.CanvasObject{renderCardImage(card, cardSize)}
-		case 3: // West
-			ui.CenterWest.Objects = []fyne.CanvasObject{renderCardImage(card, cardSize)}
+		case 0:
+			ui.CenterNorth.Add(img)
+		case 1:
+			ui.CenterEast.Add(img)
+		case 2:
+			ui.CenterSouth.Add(img)
+		case 3:
+			ui.CenterWest.Add(img)
 		}
 	}
 
@@ -240,96 +258,71 @@ func (ui *GameUI) updateTrickDisplay(trick []*Card) {
 	ui.CenterWest.Refresh()
 }
 
-func (ui *GameUI) showComputerDecision(player *Player, decision string, suit Suit) {
-	var position *fyne.Container
-	var label *widget.Label
+func (ui *GameUI) showComputerDecision(player *Player, text string, suit Suit) {
+	ui.Window.Canvas().SetContent(ui.MainContent) // Ensure main content stays visible
 
-	// Determine which position to show the decision
+	var pos *fyne.Container
 	switch player.Name {
 	case "NORTH":
-		position = ui.CenterNorth
-		label = ui.NorthScore
+		pos = ui.CenterNorth
 	case "EAST":
-		position = ui.CenterEast
-		label = ui.EastScore
+		pos = ui.CenterEast
 	case "WEST":
-		position = ui.CenterWest
-		label = ui.WestScore
+		pos = ui.CenterWest
 	default:
 		return
 	}
 
-	// Clear any previous decision
-	position.Objects = nil
-
-	// Create decision text
-	decisionText := decision
+	fullText := text
 	if suit != Suit(-1) {
-		decisionText += " " + suit.FriendlySuit()
+		fullText += " " + suit.FriendlySuit()
 	}
-	decisionLabel := widget.NewLabel(decisionText)
-	decisionLabel.Alignment = fyne.TextAlignCenter
-	decisionLabel.TextStyle.Bold = true
-	position.Add(decisionLabel)
 
-	// Temporarily update the score label
-	originalText := label.Text
-	label.SetText("Thinking...")
-	ui.Window.Content().Refresh()
-
-	// Pause for visibility
-	time.Sleep(1 * time.Second)
-
-	// Restore original label and clear decision
-	label.SetText(originalText)
-	position.Objects = nil
-	ui.Window.Content().Refresh()
+	pos.Objects = []fyne.CanvasObject{
+		widget.NewLabelWithStyle(fullText,
+			fyne.TextAlignCenter,
+			fyne.TextStyle{Bold: true}),
+	}
+	pos.Refresh()
 }
 
 func (ui *GameUI) processComputerTrumpSelection() {
-	if !ui.Round.SelectingTrump || ui.Round.ActivePlayer == 2 { // Human player's position
+	if !ui.Round.SelectingTrump {
 		return
 	}
 
-	currentPlayer := ui.Round.Players[ui.Round.ActivePlayer]
-	if !currentPlayer.ComputerPlayer {
-		return
-	}
+	// Only proceed if it's a computer player's turn
+	for ui.Round.SelectingTrump && ui.Round.ActivePlayer != 2 { // 2 is human position
+		player := ui.Round.Players[ui.Round.ActivePlayer]
 
-	var decision Call
-	var suit Suit
+		ui.showComputerDecision(player, "Thinking...", Suit(-1))
+		time.Sleep(800 * time.Millisecond)
 
-	if len(ui.Round.Deck.Cards) > 0 && ui.Round.Deck.Cards[0].FaceUp {
-		// First round decision
-		suit = ui.Round.Deck.Cards[0].Suit
-		decision = currentPlayer.CallOrPass(suit, ui.Round.Dealer%2 == ui.Round.ActivePlayer%2)
-	} else {
-		// Second round decision
-		passedSuit := Suit(-1)
-		if len(ui.Round.Deck.Cards) > 0 {
-			passedSuit = ui.Round.Deck.Cards[0].Suit
+		var decision Call
+		var suit Suit
+
+		// Decision logic...
+		if len(ui.Round.Deck.Cards) > 0 && ui.Round.Deck.Cards[0].FaceUp {
+			suit = ui.Round.Deck.Cards[0].Suit
+			decision = player.CallOrPass(suit, ui.Round.Dealer%2 == ui.Round.ActivePlayer%2)
+		} else {
+			passedSuit := Suit(-1)
+			if len(ui.Round.Deck.Cards) > 0 {
+				passedSuit = ui.Round.Deck.Cards[0].Suit
+			}
+			decision, suit = player.DeclareTrump(passedSuit)
 		}
-		decision, suit = currentPlayer.DeclareTrump(passedSuit)
-	}
 
-	// Show the computer's decision
-	ui.showComputerDecision(currentPlayer, decision.FriendlyCall(), suit)
+		ui.showComputerDecision(player, decision.FriendlyCall(), suit)
+		time.Sleep(1 * time.Second)
 
-	// Process the decision
-	if decision == Pass {
 		ui.Round.ComputerTrumpSelection(decision, suit)
-		if ui.Round.SelectingTrump && ui.Round.ActivePlayer == 2 {
-			ui.showTrumpSelection()
-		}
-	} else {
-		ui.Round.ComputerTrumpSelection(decision, suit)
-		// Force immediate UI refresh after computer selects trump
 		ui.RefreshUI()
 
-		// If human is dealer and computer ordered up, show discard UI
-		if ui.Round.Dealer == 2 && len(ui.Round.Deck.Cards) > 0 &&
-			ui.Round.Deck.Cards[0].FaceUp && decision == OrderUp {
-			ui.showDiscardSelection()
+		// Break if it's now human's turn
+		if ui.Round.ActivePlayer == 2 {
+			ui.showTrumpSelection()
+			return
 		}
 	}
 }
@@ -419,44 +412,92 @@ func (ui *GameUI) showDealerDiscard() {
 	dialog.Show()
 }
 
+func (ui *GameUI) showComputerThinking(player *Player) {
+	var pos *fyne.Container
+
+	switch player.Name {
+	case "NORTH":
+		pos = ui.CenterNorth
+	case "EAST":
+		pos = ui.CenterEast
+	case "WEST":
+		pos = ui.CenterWest
+	default:
+		return
+	}
+
+	pos.Objects = []fyne.CanvasObject{
+		widget.NewLabelWithStyle("Thinking...",
+			fyne.TextAlignCenter,
+			fyne.TextStyle{Bold: true}),
+	}
+	pos.Refresh()
+}
+
 func (ui *GameUI) playComputerTurn() {
-	if ui.Round.ActivePlayer == 2 || ui.Round.SelectingTrump {
-		return // Not computer's turn
-	}
-
-	// Get current trick state
-	var partialTrick []*Card
-	for _, card := range ui.Trick {
-		if card != nil {
-			partialTrick = append(partialTrick, card)
-		}
-	}
-
-	// Computer makes play
 	computer := ui.Round.Players[ui.Round.ActivePlayer]
-	play := computer.BestPlay(partialTrick, *ui.Round)
-	playedCard := computer.PlayCard(&play)
-	ui.Trick[ui.Round.ActivePlayer] = playedCard // Store the played card
+	if !computer.IsPlaying {
+		ui.Round.ActivePlayer = (ui.Round.ActivePlayer + 1) % 4
+		ui.playComputerTurn() // Move to next player
+		return
+	}
+	// Show thinking indicator
+	ui.showComputerDecision(computer, "Playing...", Suit(-1))
+	time.Sleep(500 * time.Millisecond)
 
-	// Update the display with all cards in the trick
+	play := computer.BestPlay(ui.getCurrentTrick(), *ui.Round)
+	playedCard := computer.PlayCard(&play)
+
+	// Update trick display
+	ui.Trick[ui.Round.ActivePlayer] = playedCard
 	ui.updateTrickDisplay(ui.Trick)
+
+	// Brief pause to see the play
+	time.Sleep(1 * time.Second)
 
 	// Move to next player
 	ui.Round.ActivePlayer = (ui.Round.ActivePlayer + 1) % 4
 
-	// If trick is complete, determine winner
-	if len(partialTrick) == 3 { // All 4 players have played
-		winner := resolveTrick(ui.Trick, ui.Round)
+	// If trick is complete, resolve it
+	if ui.isTrickComplete() {
+		winner := resolveTrick(ui.Trick[:], ui.Round)
 		ui.Round.Lead = winner
 		ui.Round.ActivePlayer = winner
 
-		// Keep cards visible for a moment before clearing
+		// Show completed trick for 1 second
 		time.Sleep(1 * time.Second)
-		ui.Trick = make([]*Card, 4)     // Clear trick for next round
-		ui.updateTrickDisplay(ui.Trick) // Update display to show cleared trick
+
+		// Clear the trick display
+		ui.clearTrickDisplay()
+
+		// Reset trick array
+		ui.Trick = [4]*Card{}
 	}
 
-	ui.RefreshUI()
+	// Continue with next player if computer
+	if ui.Round.ActivePlayer != 2 {
+		ui.playComputerTurn()
+	}
+}
+
+func (ui *GameUI) getCurrentTrick() []*Card {
+	var trick []*Card
+	for _, c := range ui.Trick {
+		if c != nil {
+			trick = append(trick, c)
+		}
+	}
+	return trick
+}
+
+func (ui *GameUI) isTrickComplete() bool {
+	count := 0
+	for _, c := range ui.Trick {
+		if c != nil {
+			count++
+		}
+	}
+	return count == 4
 }
 
 func (ui *GameUI) createDealerIndicator(position int) *widget.Label {
@@ -572,4 +613,33 @@ func (ui *GameUI) showDiscardSelection() {
 		ui.Window.Canvas(),
 	)
 	ui.discardDialog.Show()
+}
+
+func (ui *GameUI) runOnMainThread(f func()) {
+	if ui.Window == nil || ui.Window.Canvas() == nil {
+		return
+	}
+	ui.Window.Canvas().SetContent(container.NewWithoutLayout()) // Dummy refresh
+	go func() {
+		time.Sleep(100 * time.Millisecond) // Small delay to ensure UI responsiveness
+		runtime.LockOSThread()
+		f()
+		runtime.UnlockOSThread()
+	}()
+}
+
+func (ui *GameUI) clearTrickDisplay() {
+	ui.CenterNorth.Objects = nil
+	ui.CenterEast.Objects = nil
+	ui.CenterSouth.Objects = nil
+	ui.CenterWest.Objects = nil
+
+	// Refresh all containers
+	ui.CenterNorth.Refresh()
+	ui.CenterEast.Refresh()
+	ui.CenterSouth.Refresh()
+	ui.CenterWest.Refresh()
+
+	// Force full UI update
+	ui.Window.Content().Refresh()
 }

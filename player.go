@@ -17,6 +17,8 @@ type Player struct {
 	Losses         int
 	ComputerPlayer bool
 	TricksWon      int
+	Position       int
+	IsPlaying      bool // for the loners
 }
 
 var minimumScore = 7
@@ -53,12 +55,35 @@ func (player *Player) DeclareTrump(unavailableSuit Suit) (Call, Suit) {
 }
 
 func (player *Player) PickUp(card *Card) {
-	if player.ComputerPlayer {
-		player.chooseDiscard(card)
-	} else {
+	// Only add to hand if this is the correct player
+	if player.CardMap.CountSuit(card.Suit) < 5 { // Max 5 cards in Euchre
 		player.CardMap.AddToHand(card)
+	} else {
+		// Handle discard immediately if hand is full
+		player.chooseDiscard(card)
+	}
+}
+
+func (player *Player) chooseDiscard(card *Card) {
+	// Add new card first
+	player.CardMap.AddToHand(card)
+
+	// Then discard weakest card
+	cards := player.CardMap.ToSlice()
+	if len(cards) <= 5 {
+		return
 	}
 
+	var discard *Card
+	for _, c := range cards {
+		if discard == nil || c.Rank < discard.Rank {
+			discard = c
+		}
+	}
+
+	if discard != nil {
+		player.CardMap.RemoveFromHand(*discard)
+	}
 }
 
 func (player *Player) InitCardMap() {
@@ -232,15 +257,4 @@ func (player *Player) getPartner(players []*Player) *Player {
 		}
 	}
 	return nil
-}
-
-func (player *Player) chooseDiscard(card *Card) {
-	shortSuit := findShortSuit(player.CardMap, card.Suit)
-	player.CardMap.AddToHand(card)
-	var discardCard Card
-	if shortSuit != -1 {
-		discardCard = getCardInSuit(player.CardMap, shortSuit, true)
-	}
-	discardCard = getLowest(player.CardMap.ToSlice(), card.Suit)
-	player.CardMap.RemoveFromHand(discardCard)
 }
