@@ -92,7 +92,7 @@ func TestGetWScoreWithLeft(t *testing.T) {
 	newMap.AddToHand(card5)
 	wScore := newMap.GetWScore(trump);
 	assert.Equal(t,7,wScore)
-	newMap.RemoveFromHand(card1)
+	newMap.RemoveFromHand(*card1)
 	card6 := NewCard(10, Hearts)
 	newMap.AddToHand(card6)
 	wScore = newMap.GetWScore(trump);
@@ -113,7 +113,7 @@ func TestGetWScoreWithVoidSuits(t *testing.T) {
 	newMap.AddToHand(card5)
 	wScore := newMap.GetWScore(trump);
 	assert.Equal(t,6,wScore)
-	newMap.RemoveFromHand(card3)
+	newMap.RemoveFromHand(*card3)
 	card6 := NewCard(10, Clubs)
 	newMap.AddToHand(card6)
 	wScore = newMap.GetWScore(trump);

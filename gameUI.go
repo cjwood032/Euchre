@@ -42,13 +42,11 @@ type GameUI struct {
 }
 
 func (ui *GameUI) RefreshUI() {
+	fmt.Println("Refreshing UI")
 	// Update all static elements
 	if ui.discardDialog != nil {
 		ui.discardDialog.Hide()
 	}
-	ui.updateDealerIndicators()
-	ui.updateCallerIndicator()
-	ui.updateTrickDisplay([4]*Card(make([]*Card, 4)))
 
 	// Refresh kitty
 	kitty := createStackedKitty(ui.Round, fyne.NewSize(70, 110))
@@ -60,12 +58,12 @@ func (ui *GameUI) RefreshUI() {
 	ui.SouthScore.SetText(fmt.Sprintf("Score: %d", ui.Players[2].Score))
 	ui.WestScore.SetText(fmt.Sprintf("Score: %d", ui.Players[3].Score))
 
-	// Always update hand (maintains single instance)
+	// Update
 	ui.updateHumanHand()
-
+	ui.updateCallerIndicator()
 	ui.updateDealerIndicators()
-	ui.updateTrickDisplay([4]*Card(make([]*Card, 4)))
-	ui.updateHumanHand()
+	//ui.updateTrickDisplay([4]*Card(make([]*Card, 4)))
+	
 
 	if ui.Round.SelectingTrump {
 		if ui.Round.ActivePlayer == 2 { // Human's turn to order
@@ -84,6 +82,7 @@ func (ui *GameUI) RefreshUI() {
 			ui.playComputerTurn()
 		}
 	}
+	
 }
 
 func (ui *GameUI) updateHumanHand() {
@@ -128,7 +127,6 @@ func (ui *GameUI) updateHumanHand() {
 				}
 				// Move to next player
 				ui.Round.ActivePlayer = (ui.Round.ActivePlayer + 1) % 4
-				ui.updateHumanHand()
 
 				// Process computer turns if needed
 				if ui.Round.ActivePlayer != 2 {
@@ -147,9 +145,6 @@ func (ui *GameUI) showTrumpSelection() {
 		return
 	}
 
-	// First update the hand (without play buttons)
-	ui.updateHumanHand()
-	ui.updateCallerIndicator()
 	firstRound := len(ui.Round.Deck.Cards) > 0 && ui.Round.Deck.Cards[0].FaceUp
 
 	// Create a container for the trump selection UI
@@ -165,7 +160,6 @@ func (ui *GameUI) showTrumpSelection() {
 			if ui.Round.Dealer == 2 { // Human is dealer
 				ui.showDiscardSelection()
 			}
-			ui.RefreshUI()
 		})
 		orderUpBtn.Importance = widget.HighImportance
 
@@ -174,7 +168,6 @@ func (ui *GameUI) showTrumpSelection() {
 			if ui.Round.Dealer == 2 { // Human is dealer
 				ui.showDiscardSelection()
 			}
-			ui.RefreshUI()
 		})
 
 		passBtn := widget.NewButton("Pass", func() {
@@ -197,7 +190,6 @@ func (ui *GameUI) showTrumpSelection() {
 				currentSuit := suit
 				btn := widget.NewButton(suit.FriendlySuit(), func() {
 					ui.Round.HumanTrumpSelection(OrderUp, currentSuit)
-					ui.RefreshUI()
 				})
 				btn.Importance = widget.MediumImportance
 				suitButtons.Add(btn)
@@ -298,7 +290,7 @@ func (ui *GameUI) processComputerTrumpSelection() {
 		player := ui.Round.Players[ui.Round.ActivePlayer]
 
 		ui.showComputerDecision(player, "Thinking...", Suit(-1))
-		time.Sleep(800 * time.Millisecond)
+		time.Sleep(2 * time.Second)
 
 		var decision Call
 		var suit Suit
