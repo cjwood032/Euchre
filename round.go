@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 type Round struct {
 	Players        []*Player
 	Dealer         int
@@ -122,15 +124,18 @@ func (round *Round) DetermineTrump() {
 
 func (round *Round) HumanTrumpSelection(call Call, trump Suit) {
 	if !round.SelectingTrump || round.ActivePlayer < 0 || round.ActivePlayer >= len(round.Players) {
+		fmt.Println("Unexpected Trump selection, exiting")
 		return
 	}
 
 	player := round.Players[round.ActivePlayer]
 	if player.ComputerPlayer {
+		fmt.Println("Unexpected Trump selection, computer player got in hereexiting")
 		return // Not a human player
 	}
 
 	if call == Pass {
+		fmt.Println("Human passes")
 		if round.ActivePlayer == round.Dealer { // All players have passed
 			if len(round.Deck.Cards) > 0 && round.Deck.Cards[0].FaceUp {
 				// First round passed - flip card and go to second round
@@ -142,6 +147,7 @@ func (round *Round) HumanTrumpSelection(call Call, trump Suit) {
 		}
 		round.ActivePlayer = (round.ActivePlayer + 1) % 4
 	} else {
+		fmt.Printf("Player calls %s as trump\n", trump.FriendlySuit())
 		round.Trump = trump
 		round.Caller = player
 		if call == Alone {
@@ -164,7 +170,7 @@ func (round *Round) HumanTrumpSelection(call Call, trump Suit) {
 		round.SelectingTrump = false
 		round.BeginPlay(call, trump) // This will hide the kitty
 	}
-
+	
 }
 
 func (r *Round) ComputerTrumpSelection(decision Call, suit Suit) {
@@ -230,10 +236,12 @@ func (round *Round) ComputerDealerDiscard() {
 }
 
 func (round *Round) BeginPlay(call Call, trump Suit) {
+	
 	round.SelectingTrump = false
 	round.Lead = (round.Dealer + 1) % len(round.Players) // Left of dealer leads first trick
 	round.ActivePlayer = round.Lead
 	round.Trump = trump
+	fmt.Printf("Beginning play, trump is %s, first lead is %v\n", trump.FriendlySuit(), round.Lead)
 	for _, p := range round.Players {
 		p.IsPlaying = true
 	}
@@ -249,12 +257,6 @@ func (round *Round) BeginPlay(call Call, trump Suit) {
 	}
 }
 
-func (round *Round) LeftOfDealer() int {
-	if round.Dealer == len(round.Players)-1 {
-		return 0
-	}
-	return round.Dealer + 1
-}
 func (r *Round) DetermineTrickWinner(trick []*Card, lead int) int {
 	winningIndex := lead
 	winningCard := trick[lead]

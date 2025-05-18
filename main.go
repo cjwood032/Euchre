@@ -11,6 +11,12 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
+// Cleanup
+// Human call buttons no longer work
+// Don't have computer do anything until the game has loaded
+// Play card doesn't remove the card from the player's hand.
+// Human player as last play isn't removing card from their hand
+
 func main() {
 	myApp := app.New()
 	myWindow := myApp.NewWindow("Euchre")
@@ -24,6 +30,10 @@ func main() {
 		{Name: "WEST", ComputerPlayer: true, Position: 3, IsPlaying: true},
 	}
 
+	
+	callerIndicator := widget.NewLabel("")
+	callerIndicator.Alignment = fyne.TextAlignCenter
+	callerIndicator.TextStyle = fyne.TextStyle{Bold: true}
 	// Create game and initial round
 	game := CreateEuchreGame(players)
 	game.NewGame(false)
@@ -38,10 +48,6 @@ func main() {
 		Trick:   [4]*Card(make([]*Card, 4)),
 		HandBox: container.NewHBox(),
 	}
-	callerIndicator := widget.NewLabel("")
-	callerIndicator.Alignment = fyne.TextAlignCenter
-	callerIndicator.TextStyle = fyne.TextStyle{Bold: true}
-
 	ui.CallerIndicator = callerIndicator
 
 	// Add it to your layout (modify your container as needed)
@@ -53,24 +59,7 @@ func main() {
 	ui.CenterWest = container.NewCenter()
 	ui.KittyContainer = container.NewCenter()
 
-	// Create center area layout
-	centerArea := container.NewGridWithColumns(3,
-		container.NewGridWithRows(3,
-			container.NewCenter(), // NW (empty)
-			ui.CenterWest,         // W
-			container.NewCenter(), // SW (empty)
-		),
-		container.NewGridWithRows(3,
-			ui.CenterNorth,    // N
-			ui.KittyContainer, // Center (kitty)
-			ui.CenterSouth,    // S
-		),
-		container.NewGridWithRows(3,
-			container.NewCenter(), // NE (empty)
-			ui.CenterEast,         // E
-			container.NewCenter(), // SE (empty)
-		),
-	)
+	
 
 	// Initialize score labels
 	ui.NorthScore = widget.NewLabel(fmt.Sprintf("Score: %d", players[0].Score))
@@ -132,7 +121,24 @@ func main() {
 	// Create controls section (topmost)
 	// Create controls section at the very top
 	controls := container.NewCenter(newGameBtn)
-
+	// Create center area layout
+	centerArea := container.NewGridWithColumns(3,
+		container.NewGridWithRows(3,
+			container.NewCenter(), // NW (empty)
+			ui.CenterWest,         // W
+			container.NewCenter(), // SW (empty)
+		),
+		container.NewGridWithRows(3,
+			ui.CenterNorth,    // N
+			ui.KittyContainer, // Center (kitty)
+			ui.CenterSouth,    // S
+		),
+		container.NewGridWithRows(3,
+			container.NewCenter(), // NE (empty)
+			ui.CenterEast,         // E
+			container.NewCenter(), // SE (empty)
+		),
+	)
 	// Main content with clear hierarchy
 	ui.MainContent = container.NewBorder(
 		container.NewVBox( // Top section
@@ -159,22 +165,9 @@ func main() {
 }
 
 func resolveTrick(trick []*Card, round *Round) int {
-	winningIndex := round.Lead
-	winningCard := trick[winningIndex]
-	leadSuit := trick[round.Lead].Suit
-
-	for i := 1; i < 4; i++ {
-		pos := (round.Lead + i) % 4
-		if trick[pos].Beats(winningCard, leadSuit, round.Trump) {
-			winningIndex = pos
-			winningCard = trick[pos]
-		}
-	}
-
+	winningIndex := round.DetermineTrickWinner(trick, round.Lead)
 	// Update tricks won for active players only
-	if round.Players[winningIndex].IsPlaying {
-		round.Players[winningIndex].TricksWon++
-	}
+	round.Players[winningIndex].TricksWon++
 
 	return winningIndex
 }

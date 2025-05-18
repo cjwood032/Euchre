@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 type Call int
 
 const (
@@ -118,6 +120,8 @@ func (player *Player) BestPlay(currentTrick []*Card, round Round) Card {
 
 	hand := player.CardMap.ToSlice()
 	playable := getPlayableCards(hand, leadSuit, round.Trump)
+	fmt.Printf("Cards for %s, trump is %s, lead suit is %s\n", player.Name, round.Trump.FriendlySuit(), leadSuit.FriendlySuit())
+	printPlayable(playable.inSuit, playable.trump, playable.other)
 	hasLeadSuit := len(playable.inSuit) > 0
 
 	if !hasLeadSuit {
@@ -191,6 +195,23 @@ func getPlayableCards(hand []*Card, lead Suit, trump Suit) (result struct{ inSui
 		}
 	}
 	return
+}
+
+func printPlayable(inSuit, trump, other []*Card ){
+	fmt.Println("In Suit");
+	for _, c := range inSuit {
+		fmt.Printf("Card is %v of %v\n", c.Rank, c.Suit.FriendlySuit())
+	}
+	fmt.Println("Trump");
+	for _, c := range trump {
+		fmt.Printf("Card is %v of %v\n", c.Rank, c.Suit.FriendlySuit())
+	}
+	fmt.Println("Other");
+	for _, c := range other {
+		fmt.Printf("Card is %v of %v\n", c.Rank, c.Suit.FriendlySuit())
+	}
+
+
 }
 
 func getStrongest(cards []*Card, trump Suit) Card {

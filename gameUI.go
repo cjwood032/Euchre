@@ -120,14 +120,14 @@ func (ui *GameUI) updateHumanHand() {
 					winner := resolveTrick(ui.Trick[:], ui.Round)
 					ui.Round.Lead = winner
 					ui.Round.ActivePlayer = winner
-
+					fmt.Printf("%s won the trick \n", ui.Players[winner].Name)
 					time.Sleep(1 * time.Second)
 					ui.clearTrickDisplay()
 					ui.Trick = [4]*Card{}
+				} else {
+					// Move to next player
+					ui.Round.ActivePlayer = (ui.Round.ActivePlayer + 1) % 4
 				}
-				// Move to next player
-				ui.Round.ActivePlayer = (ui.Round.ActivePlayer + 1) % 4
-
 				// Process computer turns if needed
 				if ui.Round.ActivePlayer != 2 {
 					ui.playComputerTurn()
@@ -160,6 +160,7 @@ func (ui *GameUI) showTrumpSelection() {
 			if ui.Round.Dealer == 2 { // Human is dealer
 				ui.showDiscardSelection()
 			}
+			ui.RefreshUI()
 		})
 		orderUpBtn.Importance = widget.HighImportance
 
@@ -168,6 +169,7 @@ func (ui *GameUI) showTrumpSelection() {
 			if ui.Round.Dealer == 2 { // Human is dealer
 				ui.showDiscardSelection()
 			}
+			ui.RefreshUI()
 		})
 
 		passBtn := widget.NewButton("Pass", func() {
@@ -204,6 +206,7 @@ func (ui *GameUI) showTrumpSelection() {
 			ui.processComputerTrumpSelection() // Continue with next players
 		})
 		trumpSelectionContainer.Add(passBtn)
+		
 	}
 
 	// Create the complete content
@@ -435,10 +438,10 @@ func (ui *GameUI) playComputerTurn() {
 		ui.playComputerTurn() // Move to next player
 		return
 	}
+	fmt.Printf("\n\nPlayer %s is taking their turn\n", computer.Name)
 	// Show thinking indicator
 	ui.showComputerDecision(computer, "Playing...", Suit(-1))
-	time.Sleep(500 * time.Millisecond)
-
+	time.Sleep(1 * time.Second)
 	play := computer.BestPlay(ui.getCurrentTrick(), *ui.Round)
 	playedCard := computer.PlayCard(&play)
 
@@ -449,25 +452,36 @@ func (ui *GameUI) playComputerTurn() {
 	// Brief pause to see the play
 	time.Sleep(1 * time.Second)
 
-	// Move to next player
-	ui.Round.ActivePlayer = (ui.Round.ActivePlayer + 1) % 4
+	
 
 	// If trick is complete, resolve it
 	if ui.isTrickComplete() {
 		winner := resolveTrick(ui.Trick[:], ui.Round)
 		ui.Round.Lead = winner
 		ui.Round.ActivePlayer = winner
-
+		fmt.Printf("%s WON the trick \n", ui.Players[winner].Name)
 		// Show completed trick for 1 second
 		time.Sleep(1 * time.Second)
 
 		// Clear the trick display
 		ui.clearTrickDisplay()
-
+		ui.RefreshUI()
 		// Reset trick array
 		ui.Trick = [4]*Card{}
 	}
-
+	// If trick is complete
+				if ui.isTrickComplete() {
+					winner := resolveTrick(ui.Trick[:], ui.Round)
+					ui.Round.Lead = winner
+					ui.Round.ActivePlayer = winner
+					fmt.Printf("%s won the trick \n", ui.Players[winner].Name)
+					time.Sleep(1 * time.Second)
+					ui.clearTrickDisplay()
+					ui.Trick = [4]*Card{}
+				} else {
+					// Move to next player
+					ui.Round.ActivePlayer = (ui.Round.ActivePlayer + 1) % 4
+				}
 	// Continue with next player if computer
 	if ui.Round.ActivePlayer != 2 {
 		ui.playComputerTurn()
@@ -557,11 +571,6 @@ func (ui *GameUI) updateDealerIndicators() {
 	}
 }
 
-func (ui *GameUI) clearTrumpSelection() {
-	// Reset to main content immediately
-	ui.Window.SetContent(ui.MainContent)
-	ui.RefreshUI()
-}
 
 func (ui *GameUI) showDiscardSelection() {
 	if ui.Round.Dealer != 2 || len(ui.Players[2].CardMap.ToSlice()) <= 5 {
